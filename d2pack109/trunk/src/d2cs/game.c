@@ -93,7 +93,7 @@ extern int d2cs_gamelist_destroy(void)
 	END_LIST_TRAVERSE_DATA();
 
 	if (list_destroy(gamelist_head)<0) {
-		log_error("error destroy connection list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error destroy connection list");
 		return -1;
 	}
 	gamelist_head=NULL;
@@ -166,7 +166,7 @@ extern void d2cs_gamelist_check_voidgame(void)
 	{
 		if (!game->currchar) {
 			if ((now-game->lastaccess_time)>timeout) {
-				log_info("game %s is empty too long time,destroying it",game->name);
+				eventlog(eventlog_level_info,__FUNCTION__,"game %s is empty too long time,destroying it",game->name);
 				game_destroy(game);
 			}
 		}
@@ -184,11 +184,11 @@ extern t_game * d2cs_game_create(char const * gamename, char const * gamepass, c
 	ASSERT(gamepass,NULL);
 	ASSERT(gamedesc,NULL);
 	if (d2cs_gamelist_find_game(gamename)) {
-		log_error("game %s already exist",gamename);
+		eventlog(eventlog_level_error,__FUNCTION__,"game %s already exist",gamename);
 		return NULL;
 	}
 	if (!(game=malloc(sizeof(t_game)))) {
-		log_error("error allocate memory for game");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for game");
 		return NULL;
 	}
 	if (!(game->name=strdup(gamename))) {
@@ -228,7 +228,7 @@ extern t_game * d2cs_game_create(char const * gamename, char const * gamepass, c
 	game->maxchar=MAX_CHAR_PER_GAME;
 	game->currchar=0;
 	if (list_prepend_data(gamelist_head,game)<0) {
-		log_error("error prepend game to game list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error prepend game to game list");
 		list_destroy(game->charlist);
 		free((void *)game->desc);
 		free((void *)game->pass);
@@ -237,7 +237,7 @@ extern t_game * d2cs_game_create(char const * gamename, char const * gamepass, c
 		return NULL;
 	}
 	total_game++;
-	log_info("game %s pass=%s desc=%s gameflag=0x%08X created (%d total)",gamename,gamepass,
+	eventlog(eventlog_level_info,__FUNCTION__,"game %s pass=%s desc=%s gameflag=0x%08X created (%d total)",gamename,gamepass,
 		gamedesc,gameflag,total_game);
 	return game;
 }
@@ -252,11 +252,11 @@ extern int game_destroy(t_game * game)
 		gamelist_curr_elem=elem_get_next_const(gamelist_curr_elem);
 	}
 	if (list_remove_data(gamelist_head,game)<0) {
-		log_error("error remove game %s on game list",game->name);
+		eventlog(eventlog_level_error,__FUNCTION__,"error remove game %s on game list",game->name);
 		return -1;
 	}
 	total_game--;
-	log_info("game %s removed from game list (%d left)",game->name,total_game);
+	eventlog(eventlog_level_info,__FUNCTION__,"game %s removed from game list (%d left)",game->name,total_game);
 	LIST_TRAVERSE(game->charlist,curr)
 	{
 		if ((charinfo=elem_get_data(curr))) {
@@ -287,7 +287,7 @@ static t_game_charinfo * game_find_character(t_game * game, char const * charnam
 	ASSERT(game,NULL);
 	ASSERT(charname,NULL);
 	if (!game->charlist) {
-		log_error("got NULL character list in game %s",game->name);
+		eventlog(eventlog_level_error,__FUNCTION__,"got NULL character list in game %s",game->name);
 		return NULL;
 	}
 	BEGIN_LIST_TRAVERSE_DATA(game->charlist,charinfo)
@@ -308,13 +308,13 @@ extern int game_add_character(t_game * game, char const * charname, unsigned cha
 	ASSERT(charname,-1);
 	charinfo=game_find_character(game,charname);
 	if (charinfo) {
-		log_info("updating character %s (game %s) status", charname,game->name);
+		eventlog(eventlog_level_info,__FUNCTION__,"updating character %s (game %s) status", charname,game->name);
 		charinfo->class=class;
 		charinfo->level=level;
 		return 0;
 	}
 	if (!(charinfo=malloc(sizeof(t_game_charinfo)))) {
-		log_error("error allocate charinfo");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate charinfo");
 		return -1;
 	}
 	if (!(charinfo->charname=strdup(charname))) {
@@ -323,13 +323,13 @@ extern int game_add_character(t_game * game, char const * charname, unsigned cha
 	charinfo->class=class;
 	charinfo->level=level;
 	if (list_append_data(game->charlist,charinfo)<0) {
-		log_error("error add character %s to game %s",charname,game->name);
+		eventlog(eventlog_level_error,__FUNCTION__,"error add character %s to game %s",charname,game->name);
 		free(charinfo);
 		return -1;
 	}
 	game->currchar++;
 	game->lastaccess_time=time(NULL);
-	log_info("added character %s to game %s (%d total)",charname,game->name,game->currchar);
+	eventlog(eventlog_level_info,__FUNCTION__,"added character %s to game %s (%d total)",charname,game->name,game->currchar);
 	return 0;
 }
 
@@ -340,18 +340,18 @@ extern int game_del_character(t_game * game, char const * charname)
 	ASSERT(game,-1);
 	ASSERT(charname,-1);
 	if (!(charinfo=game_find_character(game,charname))) {
-		log_error("character %s not found in game %s",charname,game->name);
+		eventlog(eventlog_level_error,__FUNCTION__,"character %s not found in game %s",charname,game->name);
 		return -1;
 	}
 	if (list_remove_data(game->charlist,charinfo)) {
-		log_error("error remove character %s from game %s",charname,game->name);
+		eventlog(eventlog_level_error,__FUNCTION__,"error remove character %s from game %s",charname,game->name);
 		return -1;
 	}
 	if (charinfo->charname) free((void *)charinfo->charname);
 	free(charinfo);
 	game->currchar--;
 	game->lastaccess_time=time(NULL);
-	log_info("removed character %s from game %s (%d left)",charname,game->name,game->currchar);
+	eventlog(eventlog_level_info,__FUNCTION__,"removed character %s from game %s (%d left)",charname,game->name,game->currchar);
 	return 0;
 }
 

@@ -151,8 +151,6 @@
 #define BNETD_ISSUE_FILE        "conf/bnissue.txt"
 #define BNETD_MAIL_DIR          "var/bnmail"
 #define PVPGN_VERSIONCHECK      "conf/versioncheck"
-#define BITS_PASSWORD_FILE      "conf/bits_passwd"
-#define BITS_MOTD_FILE          "conf/bits_motd"
 #define BNETD_LADDER_DIR        "var/ladders"
 #define BNETD_STATUS_DIR        "var/status"
 #define BNETD_TOPIC_FILE	"var/topics"
@@ -223,15 +221,6 @@
 #define PVPGN_VERSION_TIMEDIV 3600 /* 1 hour */
 #define PVPGN_CACHE_MEMLIMIT  5000000  /* bytes */
 #define PVPGN_DEFAULT_SYMB    "-_[]"
-
-/* BITS (uplink) defaults */
-#define BITS_DO_UPLINK        0
-#define BITS_UPLINK_SERVER    "localhost"
-#define BITS_UPLINK_USERNAME  "anonymous"
-#define BITS_ALLOW_UPLINK     0
-#define BITS_DEBUG            1
-#define BITS_PING_INTERVAL    30
-#define BITS_PING_TIMEOUT     10
 
 /***************************************************************/
 /* default values for the tracking server */

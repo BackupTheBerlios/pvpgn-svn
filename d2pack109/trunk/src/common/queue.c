@@ -31,30 +31,47 @@
 #  include <malloc.h>
 # endif
 #endif
+#ifdef HAVE_STRING_H
+# include <string.h>
+#else
+# ifdef HAVE_STRINGS_H
+#  include <strings.h>
+# endif
+# ifdef HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+#endif
 #include "common/packet.h"
 #include "common/eventlog.h"
 #include "common/queue.h"
 #include "common/setup_after.h"
 
+#define QUEUE_QUANTUM	10 /* allocate ring buffer slots for 10 packets at once */
 
 extern t_packet * queue_pull_packet(t_queue * * queue)
 {
     t_queue *  temp;
     t_packet * packet;
-    
+
+//    eventlog(eventlog_level_debug, __FUNCTION__, "entered: queue %p", queue);
     if (!queue)
     {
 	eventlog(eventlog_level_error,"queue_pull_packet","got NULL queue pointer");
         return NULL;
     }
-    if (!*queue)
-        return NULL;
-    
+
     temp = *queue;
-    *queue = (*queue)->next;
-    packet = temp->packet;
-    free(temp);
-    
+
+    if (!temp || !temp->ulen)
+        return NULL;
+
+//    eventlog(eventlog_level_debug, __FUNCTION__, "getting element from tail (%d/%d head/tail %d/%d)", temp->alen, temp->ulen, temp->head, temp->tail);
+    /* getting entry from tail and updating queue */
+    packet = temp->ring[temp->tail];
+    temp->tail = (temp->tail + 1) % temp->alen;
+    temp->ulen--;
+//    eventlog(eventlog_level_debug, __FUNCTION__, "read %p element from tail (%d/%d head/tail %d/%d)", packet, temp->alen, temp->ulen, temp->head, temp->tail);
+
     if (!packet)
     {
 	eventlog(eventlog_level_error,"queue_pull_packet","NULL packet in queue");
@@ -68,16 +85,17 @@ extern t_packet * queue_pull_packet(t_queue * * queue)
 extern t_packet * queue_peek_packet(t_queue const * const * queue)
 {
     t_packet * packet;
-    
+
+//    eventlog(eventlog_level_debug, __FUNCTION__, "entered: queue %p", queue);
     if (!queue)
     {
 	eventlog(eventlog_level_error,"queue_peek_packet","got NULL queue pointer");
         return NULL;
     }
-    if (!*queue)
+    if (!*queue || !(*queue)->ulen)
         return NULL;
-    
-    packet = (*queue)->packet;
+
+    packet = (*queue)->ring[(*queue)->tail];
     
     if (!packet)
     {
@@ -92,7 +110,9 @@ extern t_packet * queue_peek_packet(t_queue const * const * queue)
 extern void queue_push_packet(t_queue * * queue, t_packet * packet)
 {
     t_queue * temp;
-    
+    void *ptr;
+
+//    eventlog(eventlog_level_debug, __FUNCTION__, "entered: queue %p packet %p", queue, packet);
     if (!queue)
     {
 	eventlog(eventlog_level_error,"queue_push_packet","got NULL queue pointer");
@@ -103,65 +123,92 @@ extern void queue_push_packet(t_queue * * queue, t_packet * packet)
 	eventlog(eventlog_level_error,"queue_push_packet","got NULL packet");
         return;
     }
-    
+
     temp = *queue;
-    
+
     if (!temp)
     {
+//	eventlog(eventlog_level_debug, __FUNCTION__, "queue is NULL , initilizing");
         if (!(temp = malloc(sizeof(t_queue))))
         {
 	    eventlog(eventlog_level_error,"queue_push_packet","could not allocate memory for head of queue");
             return;
         }
-	temp->next = NULL;
+	temp->alen = temp->ulen = 0;
+	temp->ring = NULL;
+	temp->head = temp->tail = 0;
         *queue = temp;
     }
-    else
-    {
-        /* add packet at end of queue */
-	for (; temp->next; temp=temp->next);
-	if (!(temp->next = malloc(sizeof(t_queue))))
-	{
-	    eventlog(eventlog_level_error,"queue_push_packet","could not allocate memory for tail of queue");
-	    return;
+
+    if (temp->ulen == temp->alen) { /* ring queue is full, need to allocate some memory */
+/* FIXME: find a solution
+	if (temp->alen)
+	    eventlog(eventlog_level_error, __FUNCTION__, "queue is full (resizing) (oldsize: %u)", temp->alen);
+*/
+
+	if (!(ptr = realloc(temp->ring, sizeof(t_packet *) * (temp->alen + QUEUE_QUANTUM)))) {
+	    eventlog(eventlog_level_error, __FUNCTION__, "not enough memory for ring buffer");
+	    return ;
 	}
-	temp->next->next = NULL;
-	temp = temp->next;
+
+	temp->ring = (t_packet **)ptr;
+	temp->alen += QUEUE_QUANTUM;
+
+//	eventlog(eventlog_level_debug, __FUNCTION__, "queue new size %d/%d head/tail %d/%d", temp->alen, temp->ulen, temp->head, temp->tail);
+	if (temp->head) {
+	    unsigned moved;
+
+	    moved = (QUEUE_QUANTUM <= temp->head) ? QUEUE_QUANTUM : temp->head;
+	    memmove(temp->ring + temp->ulen, temp->ring, sizeof(t_packet *) * moved);
+	    if (temp->head > QUEUE_QUANTUM) {
+		memmove(temp->ring, temp->ring + moved, sizeof(t_packet *) * (temp->head - moved));
+		temp->head -= moved;
+	    } else if (temp->head < QUEUE_QUANTUM)
+		temp->head = temp->ulen + moved;
+	    else temp->head = 0;
+	} else temp->head = temp->ulen;
+
     }
-    
-    temp->packet = packet_add_ref(packet);
+
+    temp->ring[temp->head] = packet_add_ref(packet);
+
+    temp->head = (temp->head + 1) % temp->alen;
+    temp->ulen++;
+//    eventlog(eventlog_level_debug, __FUNCTION__, "packet added (%d/%d head/tail %d/%d)", temp->alen, temp->ulen, temp->head, temp->tail);
 }
 
 
 extern int queue_get_length(t_queue const * const * queue)
 {
-    t_queue const * temp;
-    int             count;
-    
+//    eventlog(eventlog_level_debug, __FUNCTION__, "entered: queue %p", queue);
     if (!queue)
     {
 	eventlog(eventlog_level_error,"queue_get_length","got NULL queue pointer");
 	return 0;
     }
-    
-    for (temp=*queue,count=0; temp; temp=temp->next,count++);
-    
-    return count;
+
+    if (*queue == NULL) return 0;
+
+    return (*queue)->ulen;
 }
 
 
 extern void queue_clear(t_queue * * queue)
 {
     t_packet * temp;
-    
+
+//    eventlog(eventlog_level_debug, __FUNCTION__, "entered: queue %p", queue);
     if (!queue)
     {
 	eventlog(eventlog_level_error,"queue_clear","got NULL queue pointer");
 	return;
     }
-    
-    while ((temp = queue_pull_packet(queue)))
-	packet_del_ref(temp);
-    if (*queue!=NULL)
-	eventlog(eventlog_level_error,"queue_clear","could not clear queue");
+
+    if (*queue) {
+	while ((temp = queue_pull_packet(queue)))
+	    packet_del_ref(temp);
+
+	if ((*queue)->ring) free((void*)((*queue)->ring));
+	free((void*)(*queue));
+    }
 }

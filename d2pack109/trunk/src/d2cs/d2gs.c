@@ -109,7 +109,7 @@ extern int d2gslist_reload(char const * gslist)
 	while ((s=strsep(&temp, ","))) {
 		host_lookup(s, &resolveipaddr);
 		if ((ip=net_inet_addr(addr_num_to_ip_str(resolveipaddr)))==~0UL) {
-			log_error("got bad ip address %s", addr_num_to_ip_str(resolveipaddr));
+			eventlog(eventlog_level_error,__FUNCTION__,"got bad ip address %s", addr_num_to_ip_str(resolveipaddr));
 			continue;
 		}
 		if (!(gs=d2gslist_find_gs_by_ip(ntohl(ip)))) {
@@ -140,7 +140,7 @@ extern int d2gslist_destroy(void)
 	END_LIST_TRAVERSE_DATA_CONST()
 
 	if (list_destroy(d2gslist_head)<0) {
-		log_error("error destroy d2gs list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error destroy d2gs list");
 		return -1;
 	}
 	d2gslist_head=NULL;
@@ -178,15 +178,15 @@ extern t_d2gs * d2gs_create(char const * ipaddr)
 
 	ASSERT(ipaddr,NULL);
 	if ((ip=net_inet_addr(ipaddr))==~0UL) {
-		log_error("got bad ip address %s",ipaddr);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad ip address %s",ipaddr);
 		return NULL;
 	}
 	if (d2gslist_find_gs_by_ip(ntohl(ip))) {
-		log_error("game server %s already in list",ipaddr);
+		eventlog(eventlog_level_error,__FUNCTION__,"game server %s already in list",ipaddr);
 		return NULL;
 	}
 	if (!(gs=malloc(sizeof(t_d2gs)))) {;
-		log_error("error allocate memory");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory");
 		return NULL;
 	}
 	gs->ip=ntohl(ip);
@@ -199,11 +199,11 @@ extern t_d2gs * d2gs_create(char const * ipaddr)
 	gs->connection=NULL;
 
 	if (list_append_data(d2gslist_head,gs)<0) {
-		log_error("error add gs to list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error add gs to list");
 		free(gs);
 		return NULL;
 	}
-	log_info("added game server %s (id: %d) to list",ipaddr,gs->id);
+	eventlog(eventlog_level_info,__FUNCTION__,"added game server %s (id: %d) to list",ipaddr,gs->id);
 	return gs;
 }
 
@@ -211,14 +211,14 @@ extern int d2gs_destroy(t_d2gs * gs)
 {
 	ASSERT(gs,-1);
 	if (list_remove_data(d2gslist_head,gs)<0) {
-		log_error("error remove gs from list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error remove gs from list");
 		return -1;
 	}
 	if (gs->active && gs->connection) {
 		d2cs_conn_set_state(gs->connection, conn_state_destroy);
 		d2gs_deactive(gs, gs->connection);
 	}
-	log_info("removed game server %s (id: %d) from list",addr_num_to_ip_str(gs->ip),gs->id);
+	eventlog(eventlog_level_info,__FUNCTION__,"removed game server %s (id: %d) from list",addr_num_to_ip_str(gs->ip),gs->id);
 	free(gs);
 	return 0;
 }
@@ -334,11 +334,11 @@ extern int d2gs_active(t_d2gs * gs, t_connection * c)
 	ASSERT(c,-1);
 
 	if (gs->active && gs->connection) {
-		log_warn("game server %d is already actived, deactive previous connection first",gs->id);
+		eventlog(eventlog_level_warn,__FUNCTION__,"game server %d is already actived, deactive previous connection first",gs->id);
 		d2gs_deactive(gs, gs->connection);
 	}
 	total_d2gs++;
-	log_info("game server %s (id: %d) actived (%d total)",addr_num_to_addr_str(d2cs_conn_get_addr(c),
+	eventlog(eventlog_level_info,__FUNCTION__,"game server %s (id: %d) actived (%d total)",addr_num_to_addr_str(d2cs_conn_get_addr(c),
 		d2cs_conn_get_port(c)),gs->id,total_d2gs);
 	gs->state=d2gs_state_authed;
 	gs->connection=c;
@@ -354,27 +354,27 @@ extern int d2gs_deactive(t_d2gs * gs, t_connection * c)
 
 	ASSERT(gs,-1);
 	if (!gs->active || !gs->connection) {
-		log_warn("game server %d is not actived yet", gs->id);
+		eventlog(eventlog_level_warn,__FUNCTION__,"game server %d is not actived yet", gs->id);
 		return -1;
 	}
 	if (gs->connection != c) {
-		log_debug("game server %d connection mismatch,ignore it", gs->id);
+		eventlog(eventlog_level_debug,__FUNCTION__,"game server %d connection mismatch,ignore it", gs->id);
 		return 0;
 	}
 	total_d2gs--;
-	log_info("game server %s (id: %d) deactived (%d left)",addr_num_to_addr_str(d2cs_conn_get_addr(gs->connection),d2cs_conn_get_port(gs->connection)),gs->id,total_d2gs);
+	eventlog(eventlog_level_info,__FUNCTION__,"game server %s (id: %d) deactived (%d left)",addr_num_to_addr_str(d2cs_conn_get_addr(gs->connection),d2cs_conn_get_port(gs->connection)),gs->id,total_d2gs);
 	gs->state=d2gs_state_none;
 	gs->connection=NULL;
 	gs->active=0;
 	gs->maxgame=0;
-	log_info("destroying all games on game server %d",gs->id);
+	eventlog(eventlog_level_info,__FUNCTION__,"destroying all games on game server %d",gs->id);
 	BEGIN_LIST_TRAVERSE_DATA(d2cs_gamelist(),game)
 	{
 		if (game_get_d2gs(game)==gs) game_destroy(game);
 	}
 	END_LIST_TRAVERSE_DATA()
 	if (gs->gamenum!=0) {
-		log_error("game server %d deactived but still with games left",gs->id);
+		eventlog(eventlog_level_error,__FUNCTION__,"game server %d deactived but still with games left",gs->id);
 	}
 	gs->gamenum=0;
 	return 0;
@@ -417,7 +417,7 @@ extern int d2gs_keepalive(void)
 	t_d2gs *	gs;
 
 	if (!(packet=packet_create(packet_class_d2gs))) {
-		log_error("error creating packet");
+		eventlog(eventlog_level_error,__FUNCTION__,"error creating packet");
 		return -1;
 	}
 	packet_set_size(packet,sizeof(t_d2cs_d2gs_echoreq));

@@ -95,10 +95,10 @@ extern int handle_signal(void)
 	if (signal_data.cancel_quit) {
 		signal_data.cancel_quit=0;
 		if (!signal_data.exit_time) {
-			log_info("there is no previous shutdown to be canceled");
+			eventlog(eventlog_level_info,__FUNCTION__,"there is no previous shutdown to be canceled");
 		} else {
 			signal_data.exit_time=0;
-			log_info("shutdown was canceled due to signal");
+			eventlog(eventlog_level_info,__FUNCTION__,"shutdown was canceled due to signal");
 		}
 	}
 	if (signal_data.do_quit) {
@@ -110,24 +110,24 @@ extern int handle_signal(void)
 			signal_data.exit_time-=d2cs_prefs_get_shutdown_decr();
 		}
 		if (now >= (signed)signal_data.exit_time) {
-			log_info("shutdown server due to signal");
+			eventlog(eventlog_level_info,__FUNCTION__,"shutdown server due to signal");
 			return -1;
 		}
-		log_info("the server is going to shutdown in %lu minutes",(signal_data.exit_time-now)/60);
+		eventlog(eventlog_level_info,__FUNCTION__,"the server is going to shutdown in %lu minutes",(signal_data.exit_time-now)/60);
 	}
 	if (signal_data.reload_config) {
 		signal_data.reload_config=0;
-		log_info("reloading configuartion file due to signal");
+		eventlog(eventlog_level_info,__FUNCTION__,"reloading configuartion file due to signal");
 		if (prefs_reload(cmdline_get_prefs_file())<0) {
-			log_error("error reload configuration file,exitting");
+			eventlog(eventlog_level_error,__FUNCTION__,"error reload configuration file,exitting");
 			return -1;
 		}
 		if (d2gslist_reload(prefs_get_d2gs_list())<0) {
-			log_error("error reloading game server list,exitting");
+			eventlog(eventlog_level_error,__FUNCTION__,"error reloading game server list,exitting");
 			return -1;
 		}
 		if (d2gstrans_reload(prefs_get_d2gstrans_file())<0) {
-			log_error("error reloading d2gstrans list,exitting");
+			eventlog(eventlog_level_error,__FUNCTION__,"error reloading d2gstrans list,exitting");
 			return -1;
 		}
 
@@ -136,7 +136,7 @@ extern int handle_signal(void)
         {
             if (!(temp = strdup(levels)))
             {
-               eventlog(eventlog_level_fatal,"handle_signal","could not allocate memory for temp (exiting)");
+               eventlog(eventlog_level_fatal,__FUNCTION__,"could not allocate memory for temp (exiting)");
                return -1;
             }
 
@@ -145,7 +145,7 @@ extern int handle_signal(void)
             while (tok)
             {
               if (eventlog_add_level(tok)<0)
-              eventlog(eventlog_level_error,"handle_signal","could not add log level \"%s\"",tok);
+              eventlog(eventlog_level_error,__FUNCTION__,"could not add log level \"%s\"",tok);
               tok = strtok(NULL,",");
             }
 
@@ -156,13 +156,13 @@ extern int handle_signal(void)
 	}
 	if (signal_data.reload_ladder) {
 		signal_data.reload_ladder=0;
-		log_info("reloading ladder data due to signal");
+		eventlog(eventlog_level_info,__FUNCTION__,"reloading ladder data due to signal");
 		d2ladder_refresh();
 	}
 	
 	if (signal_data.restart_d2gs) {
 		signal_data.restart_d2gs=0;
-		eventlog(eventlog_level_info, "handle_singal","restarting all game servers due to signal");
+		eventlog(eventlog_level_info,__FUNCTION__,"restarting all game servers due to signal");
 		d2gs_restart_all_gs();
 	}
 	
@@ -185,31 +185,31 @@ static void on_signal(int s)
 {
 	switch (s) {
 		case SIGINT:
-			log_debug("sigint received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigint received");
 			signal_data.do_quit=1;
 			break;
 		case SIGTERM:
-			log_debug("sigint received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigint received");
 			signal_data.do_quit=1;
 			break;
 		case SIGABRT:
-			log_debug("sigabrt received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigabrt received");
 			signal_data.cancel_quit=1;
 			break;
 		case SIGHUP:
-			log_debug("sighup received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sighup received");
 			signal_data.reload_config=1;
 			break;
 		case SIGUSR1:
-			log_debug("sigusr1 received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigusr1 received");
 			signal_data.reload_ladder=1;
 			break;
 		case SIGUSR2:
-			log_debug("sigusr2 received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigusr2 received");
 			signal_data.restart_d2gs=1;
 			break;
 		case SIGPIPE:
-			log_debug("sigpipe received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigpipe received");
 			break;
 	}
 	signal(s,on_signal);

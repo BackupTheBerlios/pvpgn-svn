@@ -101,12 +101,12 @@ static int d2charinfo_init(t_d2charinfo_file * chardata, char const * account, c
 	bn_int_set(&chardata->header.create_time,now);
 	bn_int_set(&chardata->header.last_time,now);
 
+	memset(chardata->header.charname,0,MAX_CHARNAME_LEN);
 	strncpy(chardata->header.charname,charname,MAX_CHARNAME_LEN);
-	chardata->header.charname[MAX_CHARNAME_LEN-1]='\0';
+	memset(chardata->header.account, 0,MAX_ACCTNAME_LEN);
 	strncpy(chardata->header.account,account,MAX_ACCTNAME_LEN);
-	chardata->header.account[MAX_ACCTNAME_LEN-1]='\0';
+	memset(chardata->header.realmname, 0,MAX_REALMNAME_LEN);
 	strncpy(chardata->header.realmname,prefs_get_realmname(),MAX_REALMNAME_LEN);
-	chardata->header.realmname[MAX_REALMNAME_LEN-1]='\0';
 	bn_int_set(&chardata->header.checksum,0);
 	for (i=0; i<NELEMS(chardata->header.reserved); i++) {
 		bn_int_set(&chardata->header.reserved[i],0);
@@ -118,8 +118,8 @@ static int d2charinfo_init(t_d2charinfo_file * chardata, char const * account, c
 
 	memset(chardata->portrait.gfx,D2CHARINFO_PORTRAIT_PADBYTE,sizeof(chardata->portrait.gfx));
 	memset(chardata->portrait.color,D2CHARINFO_PORTRAIT_PADBYTE,sizeof(chardata->portrait.color));
-	memset(chardata->portrait.u2,D2CHARINFO_PORTRAIT_PADBYTE,sizeof(chardata->portrait.u1));
-	memset(chardata->portrait.u1,D2CHARINFO_PORTRAIT_MASK,sizeof(chardata->portrait.u2));
+	memset(chardata->portrait.u2,D2CHARINFO_PORTRAIT_PADBYTE,sizeof(chardata->portrait.u2));
+	memset(chardata->portrait.u1,D2CHARINFO_PORTRAIT_MASK,sizeof(chardata->portrait.u1));
 	memset(chardata->pad,0,sizeof(chardata->pad));
 
 	bn_short_set(&chardata->portrait.header,D2CHARINFO_PORTRAIT_HEADER);
@@ -127,6 +127,7 @@ static int d2charinfo_init(t_d2charinfo_file * chardata, char const * account, c
 	bn_byte_set(&chardata->portrait.class,class+1);
 	bn_byte_set(&chardata->portrait.level,1);
 	bn_byte_set(&chardata->portrait.end,'\0');
+	memset(chardata->pad,0,sizeof(chardata->pad));
 	return 0;
 }
 
@@ -152,12 +153,12 @@ extern int d2char_create(char const * account, char const * charname, unsigned c
 	be created	*/
 	
 	if (!(prefs_get_lod_realm() == 2)) {
-		if (prefs_get_lod_realm() && ((status != 0x21) && (status != 0x25))) {
-		    log_warn("This Realm is for LOD Characters Only");
+		if (prefs_get_lod_realm() && ((status & 0x20) != 0x20)) {
+		    eventlog(eventlog_level_warn,__FUNCTION__,"This Realm is for LOD Characters Only");
 		    return -1;
 		}
-		if (!prefs_get_lod_realm() && ((status != 0x01) && (status != 0x05))) {
-		    log_warn("This Realm is for Classic Characters Only");
+		if (!prefs_get_lod_realm() && ((status & 0x20) != 0x00)) {
+		    eventlog(eventlog_level_warn,__FUNCTION__,"This Realm is for Classic Characters Only");
 		    return -1;
 		}
 	}
@@ -165,41 +166,41 @@ extern int d2char_create(char const * account, char const * charname, unsigned c
 /*	Once correct type of character is varified then continue with creation of character */	
 	
 	if (!prefs_allow_newchar()) {
-		log_warn("creation of new character is disabled");
+		eventlog(eventlog_level_warn,__FUNCTION__,"creation of new character is disabled");
 		return -1;
 	}
 	if (d2char_check_charname(charname)<0) {
-		log_error("got bad character name \"%s\"",charname);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad character name \"%s\"",charname);
 		return -1;
 	}
 	if (d2char_check_acctname(account)<0) {
-		log_error("got bad account name \"%s\"",account);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad account name \"%s\"",account);
 		return -1;
 	}
 	size=sizeof(buffer);
 	if (file_read(prefs_get_charsave_newbie(), buffer, &size)<0) {
-		log_error("error loading newbie save file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error loading newbie save file");
 		return -1;
 	}
 	if (size>=sizeof(buffer)) {
-		log_error("newbie save file \"%s\" is corrupt (length %lu, expected <%lu)",prefs_get_charsave_newbie(),(unsigned long)size,(unsigned long)sizeof(buffer));
+		eventlog(eventlog_level_error,__FUNCTION__,"newbie save file \"%s\" is corrupt (length %lu, expected <%lu)",prefs_get_charsave_newbie(),(unsigned long)size,(unsigned long)sizeof(buffer));
 		return -1;
 	}
 
 	if (!(savefile=malloc(strlen(prefs_get_charsave_dir())+1+strlen(charname)+1))) {
-		log_error("error allocate memory for file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for file");
 		return -1;
 	}
 	d2char_get_savefile_name(savefile,charname);
 	if ((fp=fopen(savefile,"rb"))) {
-		log_warn("character save file \"%s\" for \"%s\" already exist",savefile,charname);
+		eventlog(eventlog_level_warn,__FUNCTION__,"character save file \"%s\" for \"%s\" already exist",savefile,charname);
 		fclose(fp);
 		free(savefile);
 		return -1;
 	}
 	
 	if (!(infofile=malloc(strlen(prefs_get_charinfo_dir())+1+strlen(account)+1+strlen(charname)+1))) {
-		log_error("error allocate memory for charinfo file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for charinfo file");
 		free(savefile);
 		return -1;
 	}
@@ -209,7 +210,7 @@ extern int d2char_create(char const * account, char const * charname, unsigned c
 	d2charinfo_init(&chardata,account,charname,class,status);
 
 	if (file_write(infofile,&chardata,sizeof(chardata))<0) {
-		log_error("error writing info file \"%s\"",infofile);
+		eventlog(eventlog_level_error,__FUNCTION__,"error writing info file \"%s\"",infofile);
 		unlink(infofile);
 		free(infofile);
 		free(savefile);
@@ -217,7 +218,7 @@ extern int d2char_create(char const * account, char const * charname, unsigned c
 	}
 
 	if (file_write(savefile,buffer,size)<0) {
-		log_error("error writing save file \"%s\"",savefile);
+		eventlog(eventlog_level_error,__FUNCTION__,"error writing save file \"%s\"",savefile);
 		unlink(infofile);
 		unlink(savefile);
 		free(savefile);
@@ -226,7 +227,7 @@ extern int d2char_create(char const * account, char const * charname, unsigned c
 	}
 	free(savefile);
 	free(infofile);
-	log_info("character %s(*%s) class %d status 0x%X created",charname,account,class,status);
+	eventlog(eventlog_level_info,__FUNCTION__,"character %s(*%s) class %d status 0x%X created",charname,account,class,status);
 	return 0;
 }
 
@@ -239,7 +240,7 @@ extern int d2char_find(char const * account, char const * charname)
 	ASSERT(account,-1);
 	ASSERT(charname,-1);
 	if (!(file=malloc(strlen(prefs_get_charinfo_dir())+1+strlen(account)+1+strlen(charname)+1))) {
-		log_error("error allocate memory for charinfo file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for charinfo file");
 		return -1;
 	}
 	d2char_get_infofile_name(file,account,charname);
@@ -277,7 +278,7 @@ extern int d2char_convert(char const * account, char const * charname)
 	LOD Char must be created on LOD realm	*/
 		
 	if (!prefs_get_allow_convert()) {
-		log_info("Convert char has been disabled");
+		eventlog(eventlog_level_info,__FUNCTION__,"Convert char has been disabled");
 		return -1;
 	}
 
@@ -285,26 +286,26 @@ extern int d2char_convert(char const * account, char const * charname)
 	allow_convet = 0 in d2cs.conf */
 		
 	if (d2char_check_charname(charname)<0) {
-		log_error("got bad character name \"%s\"",charname);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad character name \"%s\"",charname);
 		return -1;
 	}
 	if (d2char_check_acctname(account)<0) {
-		log_error("got bad account name \"%s\"",account);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad account name \"%s\"",account);
 		return -1;
 	}
 	if (!(file=malloc(strlen(prefs_get_charinfo_dir())+1+strlen(account)+1+strlen(charname)+1))) {
-		log_error("error allocate memory for charinfo file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for charinfo file");
 		return -1;
 	}
 	d2char_get_infofile_name(file,account,charname);
 	if (!(fp=fopen(file,"rb+"))) {
-		log_error("unable to open charinfo file \"%s\" for reading and writing (fopen: %s)",file,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"unable to open charinfo file \"%s\" for reading and writing (fopen: %s)",file,strerror(errno));
 		free(file);
 		return -1;
 	}
 	free(file);
 	if (fread(&charinfo,1,sizeof(charinfo),fp)!=sizeof(charinfo)) {
-		log_error("error reading charinfo file for character \"%s\" (fread: %s)",charname,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"error reading charinfo file for character \"%s\" (fread: %s)",charname,strerror(errno));
 		fclose(fp);
 		return -1;
 	}
@@ -318,29 +319,29 @@ extern int d2char_convert(char const * account, char const * charname)
 	
 	fseek(fp,0,SEEK_SET); /* FIXME: check return */
 	if (fwrite(&charinfo,1,sizeof(charinfo),fp)!=sizeof(charinfo)) {
-		log_error("error writing charinfo file for character \"%s\" (fwrite: %s)",charname,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"error writing charinfo file for character \"%s\" (fwrite: %s)",charname,strerror(errno));
 		fclose(fp);
 		return -1;
 	}
 	if (fclose(fp)<0) {
-		log_error("could not close charinfo file for character \"%s\" after writing (fclose: %s)",charname,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not close charinfo file for character \"%s\" after writing (fclose: %s)",charname,strerror(errno));
 		return -1;
 	}
 	
 	if (!(file=malloc(strlen(prefs_get_charsave_dir())+1+strlen(charname)+1))) {
-		log_error("error allocate memory for charsave file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for charsave file");
 		return -1;
 	}
 	d2char_get_savefile_name(file,charname);
 	if (!(fp=fopen(file,"rb+"))) {
-		log_error("could not open charsave file \"%s\" for reading and writing (fopen: %s)",file,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not open charsave file \"%s\" for reading and writing (fopen: %s)",file,strerror(errno));
 		free(file);
 		return -1;
 	}
 	free(file);
 	size=fread(buffer,1,sizeof(buffer),fp);
 	if (!feof(fp)) {
-		log_error("error reading charsave file for character \"%s\" (fread: %s)",charname,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"error reading charsave file for character \"%s\" (fread: %s)",charname,strerror(errno));
 		fclose(fp);
 		return -1;
 	}
@@ -359,15 +360,15 @@ extern int d2char_convert(char const * account, char const * charname)
 	}
 	fseek(fp,0,SEEK_SET); /* FIXME: check return */
 	if (fwrite(buffer,1,size,fp)!=size) {
-		log_error("error writing charsave file for character %s (fwrite: %s)",charname,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"error writing charsave file for character %s (fwrite: %s)",charname,strerror(errno));
 		fclose(fp);
 		return -1;
 	}
 	if (fclose(fp)<0) {
-		log_error("could not close charsave file for character \"%s\" after writing (fclose: %s)",charname,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not close charsave file for character \"%s\" after writing (fclose: %s)",charname,strerror(errno));
 		return -1;
 	}
-	log_info("character %s(*%s) converted to expansion",charname,account);
+	eventlog(eventlog_level_info,__FUNCTION__,"character %s(*%s) converted to expansion",charname,account);
 	return 0;
 }
 
@@ -379,35 +380,35 @@ extern int d2char_delete(char const * account, char const * charname)
 	ASSERT(account,-1);
 	ASSERT(charname,-1);
 	if (d2char_check_charname(charname)<0) {
-		log_error("got bad character name \"%s\"",charname);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad character name \"%s\"",charname);
 		return -1;
 	}
 	if (d2char_check_acctname(account)<0) {
-		log_error("got bad account name \"%s\"",account);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad account name \"%s\"",account);
 		return -1;
 	}
 	if (!(file=malloc(strlen(prefs_get_charinfo_dir())+1+strlen(account)+1+strlen(charname)+1))) {
-		log_error("error allocate memory for charinfo file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for charinfo file");
 		return -1;
 	}
 	d2char_get_infofile_name(file,account,charname);
 	if (unlink(file)<0) {
-		log_error("failed to unlink charinfo file \"%s\" (unlink: %s)",file,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to unlink charinfo file \"%s\" (unlink: %s)",file,strerror(errno));
 		free(file);
 		return -1;
 	}
 	free(file);
 
 	if (!(file=malloc(strlen(prefs_get_charsave_dir())+1+strlen(charname)+1))) {
-		log_error("error allocate memory for charsave file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for charsave file");
 		return -1;
 	}
 	d2char_get_savefile_name(file,charname);
 	if (unlink(file)<0) {
-		log_error("failed to unlink charsave file \"%s\" (unlink: %s)",file,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to unlink charsave file \"%s\" (unlink: %s)",file,strerror(errno));
 	}
 	free(file);
-	log_info("character %s(*%s) deleted",charname,account);
+	eventlog(eventlog_level_info,__FUNCTION__,"character %s(*%s) deleted",charname,account);
 	return 0;
 }
 
@@ -420,11 +421,11 @@ extern int d2char_get_summary(char const * account, char const * charname,t_d2ch
 	ASSERT(charname,-1);
 	ASSERT(charinfo,-1);
 	if (d2charinfo_load(account, charname, &data)<0) {
-		log_error("error loading character %s(*%s)",charname,account);
+		eventlog(eventlog_level_error,__FUNCTION__,"error loading character %s(*%s)",charname,account);
 		return -1;
 	}
 	memcpy(charinfo,&data.summary,sizeof(data.summary));
-	log_info("character %s difficulty %d expansion %d hardcore %d dead %d loaded",charname,
+	eventlog(eventlog_level_info,__FUNCTION__,"character %s difficulty %d expansion %d hardcore %d dead %d loaded",charname,
 		d2charinfo_get_difficulty(charinfo), d2charinfo_get_expansion(charinfo),
 		d2charinfo_get_hardcore(charinfo),d2charinfo_get_dead(charinfo));
 	return 0;
@@ -437,27 +438,27 @@ extern int d2charinfo_load(char const * account, char const * charname, t_d2char
 	unsigned int		size;
 
 	if (d2char_check_charname(charname)<0) {
-		log_error("got bad character name \"%s\"",charname);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad character name \"%s\"",charname);
 		return -1;
 	}
 	if (d2char_check_acctname(account)<0) {
-		log_error("got bad account name \"%s\"",account);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad account name \"%s\"",account);
 		return -1;
 	}
 	if (!(file=malloc(strlen(prefs_get_charinfo_dir())+1+strlen(account)+1+strlen(charname)+1))) {
-		log_error("error allocate memory for file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for file");
 		return -1;
 	}
 	d2char_get_infofile_name(file,account,charname);
 	size=sizeof(t_d2charinfo_file);
 	if (file_read(file,data,&size)<0) {
-		log_error("error loading character file %s",file);
+		eventlog(eventlog_level_error,__FUNCTION__,"error loading character file %s",file);
 		free(file);
 		return -1;
 	}
 	free(file);
 	if (size!=sizeof(t_d2charinfo_file)) {
-		log_error("got bad charinfo file %s (length %d)",charname,size);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad charinfo file %s (length %d)",charname,size);
 		return -1;
 	}
 	d2char_portrait_init(&data->portrait);
@@ -469,11 +470,11 @@ extern int d2charinfo_check(t_d2charinfo_file * data)
 {
 	ASSERT(data,-1);
 	if (bn_int_get(data->header.magicword) != D2CHARINFO_MAGICWORD) {
-		log_error("info data check failed (header 0x%08X)",bn_int_get(data->header.magicword));
+		eventlog(eventlog_level_error,__FUNCTION__,"info data check failed (header 0x%08X)",bn_int_get(data->header.magicword));
 		return -1;
 	}
 	if (bn_int_get(data->header.version) != D2CHARINFO_VERSION) {
-		log_error("info data check failed (version 0x%08X)",bn_int_get(data->header.version));
+		eventlog(eventlog_level_error,__FUNCTION__,"info data check failed (version 0x%08X)",bn_int_get(data->header.version));
 		return -1;
 	}
 	return 0;
@@ -502,7 +503,7 @@ extern int d2char_get_portrait(char const * account,char const * charname, t_d2c
 	ASSERT(account,-1);
 	ASSERT(portrait,-1);
 	if (d2charinfo_load(account, charname, &data)<0) {
-		log_error("error loading character %s(*%s)",charname,account);
+		eventlog(eventlog_level_error,__FUNCTION__,"error loading character %s(*%s)",charname,account);
 		return -1;
 	}
 	strcpy((char *)portrait,(char *)&data.portrait);
@@ -679,7 +680,7 @@ extern int file_read(char const * filename, void * data, unsigned int * size)
 	ASSERT(data,-1);
 	ASSERT(size,-1);
 	if (!(fp=fopen(filename,"rb"))) {
-		log_error("could not open file \"%s\" for reading (fopen: %s)",filename,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not open file \"%s\" for reading (fopen: %s)",filename,strerror(errno));
 		return -1;
 	}
 	
@@ -689,12 +690,12 @@ extern int file_read(char const * filename, void * data, unsigned int * size)
 	rewind(fp); /* FIXME: check return value */
 	
 	if (fread(data,1,n,fp)!=n) {
-		log_error("error reading file \"%s\" (fread: %s)",filename,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"error reading file \"%s\" (fread: %s)",filename,strerror(errno));
 		fclose(fp);
 		return -1;
 	}
 	if (fclose(fp)<0) {
-		log_error("could not close file \"%s\" after reading (fclose: %s)",filename,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not close file \"%s\" after reading (fclose: %s)",filename,strerror(errno));
 		return -1;
 	}
 	*size=n;
@@ -710,16 +711,16 @@ extern int file_write(char const * filename, void * data, unsigned int size)
 	ASSERT(data,-1);
 	ASSERT(size,-1);
 	if (!(fp=fopen(filename,"wb"))) {
-		log_error("could not open file \"%s\" for writing (fopen: %s)",filename,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not open file \"%s\" for writing (fopen: %s)",filename,strerror(errno));
 		return -1;
 	}
 	if (fwrite(data,1,size,fp)!=size) {
-		log_error("error writing file \"%s\" (fwrite: %s)",filename,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"error writing file \"%s\" (fwrite: %s)",filename,strerror(errno));
 		fclose(fp);
 		return -1;
 	}
 	if (fclose(fp)<0) {
-		log_error("could not close file \"%s\" after writing (fclose: %s)",filename,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not close file \"%s\" after writing (fclose: %s)",filename,strerror(errno));
 		return -1;
 	}
 	return 0;

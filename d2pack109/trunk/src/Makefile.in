@@ -63,7 +63,7 @@ INSTALL_DIRS	= @INSTALL@ -d -m 755
 # CC set by configure
 # CFLAGS set by configure
 CPPFLAGS	= @DEFS@ @DEFINES@ -DD2CS_DEFAULT_CONF_FILE=\"${confdir}/d2cs.conf\" -DD2DBS_DEFAULT_CONF_FILE=\"${confdir}/d2dbs.conf\" -I"${SRC_SRCDIR}" @CPPFLAGS@
-COMPILE		= @CC@ @CFLAGS@ ${CPPFLAGS} -c
+COMPILE		= @CC@ @CFLAGS@ ${CPPFLAGS} -fno-strict-aliasing -c
 #PREPROCESS	= @CPP@ ${CPPFLAGS}
 LINK		= @CC@ @CFLAGS@ @LDFLAGS@
 LINK_LIBS	= @LIBS@

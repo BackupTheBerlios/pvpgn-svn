@@ -23,17 +23,10 @@
 # define D2CS
 #endif
 
-#define log_none(fmt...)  eventlog(eventlog_level_none, __FUNCTION__, fmt)
-#define log_trace(fmt...) eventlog(eventlog_level_trace, __FUNCTION__, fmt)
-#define log_debug(fmt...) eventlog(eventlog_level_debug, __FUNCTION__, fmt)
-#define log_info(fmt...)  eventlog(eventlog_level_info, __FUNCTION__, fmt)
-#define log_warn(fmt...)  eventlog(eventlog_level_warn, __FUNCTION__, fmt)
-#define log_error(fmt...) eventlog(eventlog_level_error, __FUNCTION__, fmt)
-#define log_fatal(fmt...) eventlog(eventlog_level_fatal, __FUNCTION__, fmt)
-
-
-#define min(a,b) ((a)>(b)?(b):(a))
-#define max(a,b) ((a)>(b)?(a):(b))
+#ifndef WIN32 //vc and bcc seem to provide those themselfes
+#define min(a,b) (((a)>(b))?(b):(a))
+#define max(a,b) (((a)>(b))?(a):(b))
+#endif
 #define tf(a)	 ((a)?1:0)
 
 #define strcmp_charname		strcasecmp
@@ -80,7 +73,7 @@
 				func;\
 				break;\
 
-#define ASSERT(var,retval) if (!var) { log_error("got NULL " #var); return retval; }
+#define ASSERT(var,retval) if (!var) { eventlog(eventlog_level_error,__FUNCTION__,"got NULL " #var); return retval; }
 #define DECLARE_PACKET_HANDLER(handler) static int handler(t_connection *, t_packet *);
 #define NELEMS(s)		sizeof(s)/sizeof(s[0])
 
@@ -109,7 +102,7 @@
 #define DEFAULT_D2GS_RESTART_DELAY	300
 				
 #ifndef D2CS_DEFAULT_CONF_FILE
-# define D2CS_DEFAULT_CONF_FILE       "/usr/local/etc/d2cs.conf"
+# define D2CS_DEFAULT_CONF_FILE       "conf/d2cs.conf"
 #endif
 
 #define DEFAULT_LOG_FILE	"/usr/local/var/d2cs.log"

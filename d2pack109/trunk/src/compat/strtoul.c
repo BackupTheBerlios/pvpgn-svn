@@ -39,12 +39,16 @@ extern unsigned long strtoul(char const * str, char * * endptr, int base)
 	base = 16;
 	pos += 2; /* skip 0x prefix */
     }
-    else
-	if ((base==0 || base==8) && str[pos]=='0')
+    else if ((base==0 || base==8) && str[pos]=='0')
 	{
-	    pos = 8;
+	    base = 8;
 	    pos += 1;
 	}
+    else if (base==0)
+    	{
+    	    base = 10;	
+    	}
+    	
     if (base<2 || base>16) /* sorry, not complete emulation (should do up to 36) */
 	return 0; /* EINVAL */
     

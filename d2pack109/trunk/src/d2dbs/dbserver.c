@@ -101,7 +101,7 @@
 static int		dbs_packet_gs_id = 0;
 static t_preset_d2gsid	*preset_d2gsid_head = NULL;
 t_list * dbs_server_connection_list = NULL;
-SOCKET dbs_server_listen_socket=-1;
+int dbs_server_listen_socket=-1;
 
 /* dbs_server_main
  * The module's driver function -- we just call other functions and
@@ -111,26 +111,26 @@ SOCKET dbs_server_listen_socket=-1;
 static int dbs_handle_timed_events(void);
 static void dbs_on_exit(void);
 
-SOCKET dbs_server_init(void);
-void dbs_server_loop(SOCKET ListeningSocket);
+int dbs_server_init(void);
+void dbs_server_loop(int ListeningSocket);
 int dbs_server_setup_fdsets(fd_set * pReadFDs, fd_set * pWriteFDs,
-        fd_set * pExceptFDs, SOCKET ListeningSocket ) ;
+        fd_set * pExceptFDs, int ListeningSocket ) ;
 BOOL dbs_server_read_data(t_d2dbs_connection* conn) ;
 BOOL dbs_server_write_data(t_d2dbs_connection* conn) ;
-int dbs_server_list_add_socket(SOCKET sd, unsigned int ipaddr);
-static int setsockopt_keepalive(SOCKET sock);
+int dbs_server_list_add_socket(int sd, unsigned int ipaddr);
+static int setsockopt_keepalive(int sock);
 static unsigned int get_preset_d2gsid(unsigned int ipaddr);
 
 
 int dbs_server_main(void)
 {
-	log_info("establishing the listener...");
+	eventlog(eventlog_level_info,__FUNCTION__,"establishing the listener...");
 	dbs_server_listen_socket = dbs_server_init();
 	if (dbs_server_listen_socket<0) {
-		log_error("dbs_server_init error ");
+		eventlog(eventlog_level_error,__FUNCTION__,"dbs_server_init error ");
 		return 3;
 	}
-	log_info("waiting for connections...");
+	eventlog(eventlog_level_info,__FUNCTION__,"waiting for connections...");
 	dbs_server_loop(dbs_server_listen_socket);
 	dbs_on_exit();
 	return 0;
@@ -144,53 +144,53 @@ int dbs_server_main(void)
  * function.
  * CreepLord: Fixed much better way (will accept dns hostnames)
  */
-SOCKET dbs_server_init(void)
+int dbs_server_init(void)
 {
-	SOCKET sd;
+	int sd;
 	struct sockaddr_in sinInterface;
 	int val;
 	t_addr	* servaddr;
 		
 	if (! (dbs_server_connection_list=list_create()))
 	{
-		log_error("list_create() failed");
+		eventlog(eventlog_level_error,__FUNCTION__,"list_create() failed");
 		return -1;
 	}
 
 	if (d2dbs_d2ladder_init()==-1)
 	{
-		log_error("d2ladder_init() failed");
+		eventlog(eventlog_level_error,__FUNCTION__,"d2ladder_init() failed");
 		return -1;
 	}
 
 	if (cl_init(DEFAULT_HASHTBL_LEN, DEFAULT_GS_MAX)==-1)
 	{
-		log_error("cl_init() failed");
+		eventlog(eventlog_level_error,__FUNCTION__,"cl_init() failed");
 		return -1;
 	}
 
 	if (psock_init()<0)
 	{
-		log_error("psock_init() failed");
+		eventlog(eventlog_level_error,__FUNCTION__,"psock_init() failed");
 		return -1;
 	}
 	
 	sd = psock_socket(PSOCK_PF_INET, PSOCK_SOCK_STREAM, PSOCK_IPPROTO_TCP);
 	if (sd==-1)
 	{
-		log_error("psock_socket() failed : %s",strerror(psock_errno()));
+		eventlog(eventlog_level_error,__FUNCTION__,"psock_socket() failed : %s",strerror(psock_errno()));
 		return -1;
 	}
 
 	val = 1;
 	if (psock_setsockopt(sd, PSOCK_SOL_SOCKET, PSOCK_SO_REUSEADDR, &val, sizeof(val)) < 0)
 	{
-		log_error("psock_setsockopt() failed : %s",strerror(psock_errno()));
+		eventlog(eventlog_level_error,__FUNCTION__,"psock_setsockopt() failed : %s",strerror(psock_errno()));
 	}
 
         if (!(servaddr=addr_create_str(d2dbs_prefs_get_servaddrs(),INADDR_ANY,DEFAULT_LISTEN_PORT)))
 	{
-		log_error("could not get servaddr");
+		eventlog(eventlog_level_error,__FUNCTION__,"could not get servaddr");
 		return -1;
 	}
 	
@@ -199,12 +199,12 @@ SOCKET dbs_server_init(void)
 	sinInterface.sin_port = htons(addr_get_port(servaddr));
 	if (psock_bind(sd, (struct sockaddr*)&sinInterface, (psock_t_socklen)sizeof(struct sockaddr_in)) < 0)
 	{
-		log_error("psock_bind() failed : %s",strerror(psock_errno()));
+		eventlog(eventlog_level_error,__FUNCTION__,"psock_bind() failed : %s",strerror(psock_errno()));
 		return -1;
 	}
 	if (psock_listen(sd, LISTEN_QUEUE) < 0)
 	{
-		log_error("psock_listen() failed : %s",strerror(psock_errno()));
+		eventlog(eventlog_level_error,__FUNCTION__,"psock_listen() failed : %s",strerror(psock_errno()));
 		return -1;
 	}
 	addr_destroy(servaddr);
@@ -218,7 +218,7 @@ SOCKET dbs_server_init(void)
  * one.
  */
 
-int dbs_server_setup_fdsets(t_psock_fd_set * pReadFDs, t_psock_fd_set * pWriteFDs, t_psock_fd_set * pExceptFDs, SOCKET lsocket)
+int dbs_server_setup_fdsets(t_psock_fd_set * pReadFDs, t_psock_fd_set * pWriteFDs, t_psock_fd_set * pExceptFDs, int lsocket)
 {
 	t_elem const * elem;
 	t_d2dbs_connection* it;
@@ -263,7 +263,7 @@ BOOL dbs_server_read_data(t_d2dbs_connection* conn)
 		       	conn->ReadBuf + conn->nCharsInReadBuffer,
 		kBufferSize - conn->nCharsInReadBuffer, 0);
 	if (nBytes == 0) {
-		log_info("Socket %d was closed by the client. Shutting down.",conn->sd);
+		eventlog(eventlog_level_info,__FUNCTION__,"Socket %d was closed by the client. Shutting down.",conn->sd);
 		return FALSE;
 	} else if (nBytes < 0) {
 		int 		err;
@@ -276,7 +276,7 @@ BOOL dbs_server_read_data(t_d2dbs_connection* conn)
 		if (errlen==0 || err==PSOCK_EAGAIN) {
 			return TRUE;
 		} else {
-			log_error("psock_recv() failed : %s",strerror(err));
+			eventlog(eventlog_level_error,__FUNCTION__,"psock_recv() failed : %s",strerror(err));
 			return FALSE;
 		}
 	}
@@ -308,7 +308,7 @@ BOOL dbs_server_write_data(t_d2dbs_connection* conn)
 		if (errlen==0 || err==PSOCK_EAGAIN) {
 			return TRUE;
 		} else {
-			log_error("psock_send() failed : %s",strerror(err));
+			eventlog(eventlog_level_error,__FUNCTION__,"psock_send() failed : %s",strerror(err));
 			return FALSE;
 		}
 	}
@@ -321,13 +321,13 @@ BOOL dbs_server_write_data(t_d2dbs_connection* conn)
 	return TRUE;
 }
 
-int dbs_server_list_add_socket(SOCKET sd, unsigned int ipaddr)
+int dbs_server_list_add_socket(int sd, unsigned int ipaddr)
 {
 	t_d2dbs_connection	*it;
 	struct in_addr		in;
 
 	if (!(it=malloc(sizeof(t_d2dbs_connection)))) {
-		log_error("malloc() failed");
+		eventlog(eventlog_level_error,__FUNCTION__,"malloc() failed");
 		return 0;
 	}
 	memset(it, 0, sizeof(t_d2dbs_connection));
@@ -372,10 +372,10 @@ static int dbs_handle_timed_events(void)
 	return 0;
 }
 
-void dbs_server_loop(SOCKET lsocket)
+void dbs_server_loop(int lsocket)
 {
 	struct sockaddr_in sinRemote;
-	SOCKET sd ;
+	int sd ;
 	fd_set ReadFDs, WriteFDs, ExceptFDs;
 	t_elem * elem;
 	t_d2dbs_connection* it;
@@ -388,7 +388,9 @@ void dbs_server_loop(SOCKET lsocket)
 	
 	listpurgecount=0;
 	while (1) {
+#ifndef WIN32
 		if (d2dbs_handle_signal()<0) break;
+#endif
 		dbs_handle_timed_events();
 		highest_fd=dbs_server_setup_fdsets(&ReadFDs, &WriteFDs, &ExceptFDs, lsocket);
 
@@ -396,7 +398,7 @@ void dbs_server_loop(SOCKET lsocket)
 		tv.tv_usec = SELECT_TIME_OUT;
 		switch (psock_select(highest_fd+1, &ReadFDs, &WriteFDs, &ExceptFDs, &tv) ) {
 			case -1:
-				log_error("psock_select() failed : %s",strerror(psock_errno()));
+				eventlog(eventlog_level_error,__FUNCTION__,"psock_select() failed : %s",strerror(psock_errno()));
 				continue;
 			case 0:
 				continue;
@@ -407,22 +409,22 @@ void dbs_server_loop(SOCKET lsocket)
 		if (PSOCK_FD_ISSET(lsocket, &ReadFDs)) {
 			sd = psock_accept(lsocket, (struct sockaddr*)&sinRemote, &nAddrSize);
 			if (sd == -1) {
-				log_error("psock_accept() failed : %s",strerror(psock_errno()));
+				eventlog(eventlog_level_error,__FUNCTION__,"psock_accept() failed : %s",strerror(psock_errno()));
 				return;
 			}
 			
-			log_info("accepted connection from %s:%d , socket %d .",
+			eventlog(eventlog_level_info,__FUNCTION__,"accepted connection from %s:%d , socket %d .",
 				inet_ntoa(sinRemote.sin_addr) , ntohs(sinRemote.sin_port), sd);
-			log_d2gs("accepted connection from %s:%d , socket %d .",
+			eventlog_step(prefs_get_logfile_gs(),eventlog_level_info,__FUNCTION__,"accepted connection from %s:%d , socket %d .",
 				inet_ntoa(sinRemote.sin_addr) , ntohs(sinRemote.sin_port), sd);
 			setsockopt_keepalive(sd);
 			dbs_server_list_add_socket(sd, ntohl(sinRemote.sin_addr.s_addr));
 			if (psock_ctl(sd,PSOCK_NONBLOCK)<0) {
-				log_error("could not set TCP socket [%d] to non-blocking mode (closing connection) (psock_ctl: %s)", sd,strerror(psock_errno()));
+				eventlog(eventlog_level_error,__FUNCTION__,"could not set TCP socket [%d] to non-blocking mode (closing connection) (psock_ctl: %s)", sd,strerror(psock_errno()));
 				psock_close(sd);
 			}
 		} else if (PSOCK_FD_ISSET(lsocket, &ExceptFDs)) {
-			log_error("exception on listening socket");
+			eventlog(eventlog_level_error,__FUNCTION__,"exception on listening socket");
 			/* FIXME: exceptions are not errors with TCP, they are out-of-band data */
 			return;
 		}
@@ -460,7 +462,7 @@ void dbs_server_loop(SOCKET lsocket)
 				errlen = sizeof(err);
 				if (psock_getsockopt(it->sd, PSOCK_SOL_SOCKET, PSOCK_SO_ERROR, &err, &errlen)==0) {
 					if (errlen && err!=0) {
-						log_error("data socket error : %s",strerror(err));
+						eventlog(eventlog_level_error,__FUNCTION__,"data socket error : %s",strerror(err));
 					}
 				}
 				dbs_server_shutdown_connection(it);
@@ -468,7 +470,7 @@ void dbs_server_loop(SOCKET lsocket)
 				listpurgecount++;
 			} else {
 				if (dbs_packet_handle(it)==-1) {
-					log_error("dbs_packet_handle() failed");
+					eventlog(eventlog_level_error,__FUNCTION__,"dbs_packet_handle() failed");
 					dbs_server_shutdown_connection(it);
 					list_remove_elem(dbs_server_connection_list,elem);
 					listpurgecount++;
@@ -511,7 +513,7 @@ static void dbs_on_exit(void)
 			free(curr);
 		}
 	}
-	log_info("dbserver stopped");
+	eventlog(eventlog_level_info,__FUNCTION__,"dbserver stopped");
 }
 
 int dbs_server_shutdown_connection(t_d2dbs_connection* conn)
@@ -519,16 +521,16 @@ int dbs_server_shutdown_connection(t_d2dbs_connection* conn)
 	psock_shutdown(conn->sd, PSOCK_SHUT_RDWR) ;
 	psock_close(conn->sd);
 	if (conn->verified && conn->type==CONNECT_CLASS_D2GS_TO_D2DBS) {
-		log_info("unlock all characters on gs %s(%d)",conn->serverip,conn->serverid);
-		log_d2gs("unlock all characters on gs %s(%d)",conn->serverip,conn->serverid);
-		log_d2gs("close connection to gs on socket %d", conn->sd);
+		eventlog(eventlog_level_info,__FUNCTION__,"unlock all characters on gs %s(%d)",conn->serverip,conn->serverid);
+		eventlog_step(prefs_get_logfile_gs(),eventlog_level_info,__FUNCTION__,"unlock all characters on gs %s(%d)",conn->serverip,conn->serverid);
+		eventlog_step(prefs_get_logfile_gs(),eventlog_level_info,__FUNCTION__,"close connection to gs on socket %d", conn->sd);
 		cl_unlock_all_char_by_gsid(conn->serverid);
 	}
 	free(conn);
 	return 1;
 }
 
-static int setsockopt_keepalive(SOCKET sock)
+static int setsockopt_keepalive(int sock)
 {
 	int		optval;
 	psock_t_socklen	optlen;
@@ -536,10 +538,10 @@ static int setsockopt_keepalive(SOCKET sock)
 	optval = 1;
 	optlen = sizeof(optval);
 	if (psock_setsockopt(sock, PSOCK_SOL_SOCKET, PSOCK_SO_KEEPALIVE, &optval, optlen)) {
-		log_info("failed set KEEPALIVE for socket %d, errno=%d", sock, psock_errno());
+		eventlog(eventlog_level_info,__FUNCTION__,"failed set KEEPALIVE for socket %d, errno=%d", sock, psock_errno());
 		return -1;
 	} else {
-		log_info("set KEEPALIVE option for socket %d", sock);
+		eventlog(eventlog_level_info,__FUNCTION__,"set KEEPALIVE option for socket %d", sock);
 		return 0;
 	}
 }
@@ -558,7 +560,7 @@ static unsigned int get_preset_d2gsid(unsigned int ipaddr)
 	/* not found, build a new item */
 	pgsid = malloc(sizeof(t_preset_d2gsid));
 	if (!pgsid) {
-		log_warn("failed malloc memory for t_preset_d2gsid");
+		eventlog(eventlog_level_warn,__FUNCTION__,"failed malloc memory for t_preset_d2gsid");
 		return ++dbs_packet_gs_id;
 	}
 	pgsid->ipaddr = ipaddr;

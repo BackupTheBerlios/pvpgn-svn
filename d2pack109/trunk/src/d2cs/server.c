@@ -85,7 +85,9 @@
 #include "server.h"
 #include "prefs.h"
 #include "d2ladder.h"
+#ifndef WIN32
 #include "handle_signal.h"
+#endif
 #include "common/addr.h"
 #include "common/list.h"
 #include "common/hashtable.h"
@@ -109,19 +111,19 @@ static int server_listen(void)
 	int		sock;
 
 	if (!(server_listen_addrs=addrlist_create(prefs_get_servaddrs(),INADDR_ANY,D2CS_SERVER_PORT))) {
-		log_error("error create listening address list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error create listening address list");
 		return -1;
 	}
 	BEGIN_LIST_TRAVERSE_DATA(server_listen_addrs,curr_laddr)
 	{
 		sock=net_listen(addr_get_ip(curr_laddr),addr_get_port(curr_laddr),PSOCK_SOCK_STREAM);
 		if (sock<0) {
-			log_error("error listen socket");
+			eventlog(eventlog_level_error,__FUNCTION__,"error listen socket");
 			return -1;
 		} 
-		log_info("listen on %s", addr_num_to_addr_str(addr_get_ip(curr_laddr),addr_get_port(curr_laddr)));
+		eventlog(eventlog_level_info,__FUNCTION__,"listen on %s", addr_num_to_addr_str(addr_get_ip(curr_laddr),addr_get_port(curr_laddr)));
 		if (psock_ctl(sock,PSOCK_NONBLOCK)<0) {
-			log_error("error set listen socket in non-blocking mode");
+			eventlog(eventlog_level_error,__FUNCTION__,"error set listen socket in non-blocking mode");
 		}
 		laddr_data.p=(void *)sock;
 		addr_set_data(curr_laddr,laddr_data);
@@ -143,16 +145,16 @@ static int server_accept(int sock)
 	memset(&caddr,0,sizeof(caddr));
 	csock=psock_accept(sock,(struct sockaddr *)&caddr,&caddr_len);
 	if (csock<0) {
-		log_error("error accept new connection");
+		eventlog(eventlog_level_error,__FUNCTION__,"error accept new connection");
 		return -1;
-	} else log_info("accept connection from %s",inet_ntoa(caddr.sin_addr));
+	} else eventlog(eventlog_level_info,__FUNCTION__,"accept connection from %s",inet_ntoa(caddr.sin_addr));
 
 	val=1;
 	if (psock_setsockopt(csock, PSOCK_SOL_SOCKET, PSOCK_SO_KEEPALIVE, &val,sizeof(val))<0) {
-		log_warn("error set sock option keep alive");
+		eventlog(eventlog_level_warn,__FUNCTION__,"error set sock option keep alive");
 	}
 	if (psock_ctl(csock, PSOCK_NONBLOCK)<0) {
-		log_error("error set socket to non-blocking mode");
+		eventlog(eventlog_level_error,__FUNCTION__,"error set socket to non-blocking mode");
 		psock_close(csock);
 		return -1;
 	}
@@ -161,17 +163,17 @@ static int server_accept(int sock)
 	memset(&raddr,0,sizeof(raddr));
 	ip=port=0;
 	if (psock_getsockname(csock,(struct sockaddr *)&raddr,&raddr_len)<0) {
-		log_warn("unable to get local socket info");
+		eventlog(eventlog_level_warn,__FUNCTION__,"unable to get local socket info");
 	} else {
 		if (raddr.sin_family!=PSOCK_AF_INET) {
-			log_warn("got bad socket family %d",raddr.sin_family);
+			eventlog(eventlog_level_warn,__FUNCTION__,"got bad socket family %d",raddr.sin_family);
 		} else {
 			ip=ntohl(raddr.sin_addr.s_addr);
 			port=ntohs(raddr.sin_port);
 		}
 	}
 	if (!d2cs_conn_create(csock,ip,port,ntohl(caddr.sin_addr.s_addr),ntohs(caddr.sin_port))) {
-		log_error("error create new connection");
+		eventlog(eventlog_level_error,__FUNCTION__,"error create new connection");
 		psock_close(csock);
 		return -1;
 	}
@@ -281,7 +283,7 @@ static int server_handle_socket(void)
 			    psock_errno()!=PSOCK_EINTR &&
 #endif
 			    1) {
-				log_error("select failed (select: %s)",strerror(psock_errno()));
+				eventlog(eventlog_level_error,__FUNCTION__,"select failed (select: %s)",strerror(psock_errno()));
 				return -1;
 			}
 			/* fall through */
@@ -324,7 +326,9 @@ static int server_loop(void)
 
 	count=0;
 	while (1) {
+#ifndef WIN32
 		if (handle_signal()<0) break;
+#endif
 		if (++count>=(1000/BNETD_POLL_INTERVAL)) {
 			server_handle_timed_event();
 			count=0;
@@ -351,23 +355,25 @@ static int server_cleanup(void)
 
 extern int d2cs_server_process(void)
 {
+#ifndef WIN32
 	handle_signal_init();
+#endif
 	if (psock_init()<0) {
-		log_error("failed to init network");
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to init network");
 		return -1;
 	}
-	log_info("network initialized");
+	eventlog(eventlog_level_info,__FUNCTION__,"network initialized");
 	if (s2s_init()<0) {
-		log_error("failed to init s2s connection");
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to init s2s connection");
 		return -1;
 	}
 	if (server_listen()<0) {
-		log_error("failed to setup listen socket");
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to setup listen socket");
 		return -1;
 	}
-	log_info("entering server loop");
+	eventlog(eventlog_level_info,__FUNCTION__,"entering server loop");
 	server_loop();
-	log_info("exit from server loop,cleanup");
+	eventlog(eventlog_level_info,__FUNCTION__,"exit from server loop,cleanup");
 	server_cleanup();
 	return 0;
 }

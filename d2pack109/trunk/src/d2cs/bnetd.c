@@ -58,7 +58,7 @@ extern int bnetd_check(void)
 	if (bnetd_connection) {
 		if (d2cs_conn_get_state(bnetd_connection)==conn_state_connecting) {
 			if (time(NULL) - prev_connecting_checktime > prefs_get_s2s_timeout()) {
-				log_warn("connection to bnetd s2s timeout");
+				eventlog(eventlog_level_warn,__FUNCTION__,"connection to bnetd s2s timeout");
 				d2cs_conn_set_state(bnetd_connection,conn_state_destroy);
 				return -1;
 			}
@@ -91,7 +91,7 @@ extern int bnetd_set_connection(t_connection * c)
 extern int bnetd_destroy(t_connection * c)
 {
 	if (bnetd_connection != c) {
-		log_error("bnetd connection do not match");
+		eventlog(eventlog_level_error,__FUNCTION__,"bnetd connection do not match");
 		return -1;
 	}
 	bnetd_connection=NULL;

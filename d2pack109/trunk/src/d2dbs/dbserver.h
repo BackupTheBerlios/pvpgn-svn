@@ -21,7 +21,7 @@
 #include "common/list.h"
 
 typedef struct {
-	SOCKET		sd;
+	int		sd;
 	unsigned int	ipaddr;
 	unsigned char	major;
 	unsigned char	minor;

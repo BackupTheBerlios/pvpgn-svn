@@ -7,8 +7,6 @@ CREDITS
 	complete and we would like to thank everyone who helped us in any way.
 
 PROGRAMMING CONTRIBUTORS
-	Guiot Jean-Philippe <guiot_j@epitech.net>
-
 	Zzzoom (servers@3dgames.com.ar)
 	 For persistent SQL connections patch, password brute force attacks 
 	 protection and various bug reports.

@@ -68,10 +68,10 @@ static int d2ladder_readladder(void);
 extern int d2ladder_init(void)
 {
 	if (d2ladder_readladder()<0) {
-		log_error("failed to initialize ladder data");
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to initialize ladder data");
 		return -1;
 	} 
-	log_info("ladder data initialized");
+	eventlog(eventlog_level_info,__FUNCTION__,"ladder data initialized");
 	return 0;
 }
 
@@ -86,35 +86,35 @@ static int d2ladder_readladder(void)
 
 	if (!(ladderfile=malloc(strlen(prefs_get_ladder_dir())+1+strlen(LADDER_FILE_PREFIX)+1+
 			strlen(CLIENTTAG_DIABLO2DV)+1))) {
-		log_error("error allocate memory for ladderfile");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for ladderfile");
 		return -1;
 	}
 	sprintf(ladderfile,"%s/%s.%s",prefs_get_ladder_dir(),LADDER_FILE_PREFIX,CLIENTTAG_DIABLO2DV);
 	if (!(fp=fopen(ladderfile,"rb"))) {
-		log_error("error opening ladder file \"%s\" for reading (fopen: %s)",ladderfile,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"error opening ladder file \"%s\" for reading (fopen: %s)",ladderfile,strerror(errno));
 		free(ladderfile);
 		return -1;
 	}
 	free(ladderfile);
 	if (fread(&header,1,sizeof(header),fp)!=sizeof(header)) {
-		log_error("error reading ladder file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error reading ladder file");
 		fclose(fp);
 		return -1;
 	}
 	max_ladder_type= bn_int_get(header.maxtype);
 	if (d2ladderlist_create(max_ladder_type)<0) {
-		log_error("error create ladder list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error create ladder list");
 		fclose(fp);
 		return -1;
 	}
 	temp= max_ladder_type * sizeof(*ladderheader);
 	if (!(ladderheader=malloc(temp))) {
-		log_error("error allocate ladderheader");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate ladderheader");
 		fclose(fp);
 		return -1;
 	}
 	if (fread(ladderheader,1,temp,fp)!=temp) {
-		log_error("error read ladder file");
+		eventlog(eventlog_level_error,__FUNCTION__,"error read ladder file");
 		free(ladderheader);
 		fclose(fp);
 		return -1;
@@ -123,17 +123,17 @@ static int d2ladder_readladder(void)
 		type=bn_int_get(ladderheader[i].type);
 		number=bn_int_get(ladderheader[i].number);
 		if (d2ladder_create(type,number)<0) {
-			log_error("error create ladder %d",type);
+			eventlog(eventlog_level_error,__FUNCTION__,"error create ladder %d",type);
 			continue;
 		}
 		fseek(fp,bn_int_get(ladderheader[i].offset),SEEK_SET);
 		temp=number * sizeof(*ladderinfo);
 		if (!(ladderinfo=malloc(temp))) {
-			log_error("error allocate ladder info");
+			eventlog(eventlog_level_error,__FUNCTION__,"error allocate ladder info");
 			continue;
 		}
 		if (fread(ladderinfo,1,temp,fp)!=temp) {
-			log_error("error read ladder file");
+			eventlog(eventlog_level_error,__FUNCTION__,"error read ladder file");
 			free(ladderinfo);
 			continue;
 		}
@@ -145,14 +145,14 @@ static int d2ladder_readladder(void)
 	}
 	free(ladderheader);
 	fclose(fp);
-	log_info("ladder file loaded successfully (%d types %d maxtype)",count,max_ladder_type);
+	eventlog(eventlog_level_info,__FUNCTION__,"ladder file loaded successfully (%d types %d maxtype)",count,max_ladder_type);
 	return 0;
 }
 
 static int d2ladderlist_create(unsigned int maxtype)
 {
 	if (!(ladder_data=malloc(maxtype * sizeof(*ladder_data)))) {
-		log_error("error allocate ladder_data");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate ladder_data");
 		return -1;
 	}
 	memset(ladder_data,0, maxtype * sizeof(*ladder_data));
@@ -168,11 +168,11 @@ extern int d2ladder_refresh(void)
 static int d2ladder_create(unsigned int type, unsigned int len)
 {
 	if (type>max_ladder_type) {
-		log_error("ladder type %d exceed max ladder type %d",type,max_ladder_type);
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder type %d exceed max ladder type %d",type,max_ladder_type);
 		return -1;
 	}
 	if (!(ladder_data[type].info=malloc(sizeof(t_d2cs_client_ladderinfo) * len))) {
-		log_error("error allocate memory for ladder info");
+		eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for ladder info");
 		return -1;
 	}
 	ladder_data[type].len=len;
@@ -189,19 +189,19 @@ static int d2ladder_append_ladder(unsigned int type, t_d2ladderfile_ladderinfo *
 	unsigned char			class;
 
 	if (!info) {
-		log_error("got NULL info");
+		eventlog(eventlog_level_error,__FUNCTION__,"got NULL info");
 		return -1;
 	}
 	if (type > max_ladder_type) {
-		log_error("ladder type %d exceed max ladder type %d",type,max_ladder_type);
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder type %d exceed max ladder type %d",type,max_ladder_type);
 		return -1;
 	}
 	if (!ladder_data[type].info) {
-		log_error("ladder data info not initialized");
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder data info not initialized");
 		return -1;
 	}
 	if (ladder_data[type].curr_len >= ladder_data[type].len) {
-		log_error("ladder data overflow %d > %d", ladder_data[type].curr_len, ladder_data[type].len);
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder data overflow %d > %d", ladder_data[type].curr_len, ladder_data[type].len);
 		return -1;
 	}
 	status = bn_short_get(info->status);
@@ -256,11 +256,11 @@ extern int d2ladder_get_ladder(unsigned int * from, unsigned int * count, unsign
 	if (!ladder_data) return -1;
 	ladder=ladder_data+type;
 	if (!ladder->curr_len || !ladder->info) {
-		log_warn("ladder type %d not found",type);
+		eventlog(eventlog_level_warn,__FUNCTION__,"ladder type %d not found",type);
 		return -1;
 	}
 	if (ladder->type != type) {
-		log_error("got bad ladder data");
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad ladder data");
 		return -1;
 	}
 	if (ladder->curr_len < *count) {
@@ -281,11 +281,11 @@ extern int d2ladder_find_character_pos(unsigned int type, char const * charname)
 	if (!ladder_data) return -1;
 	ladder=ladder_data+type;
 	if (!ladder->curr_len || !ladder->info) {
-		log_warn("ladder type %d not found",type);
+		eventlog(eventlog_level_warn,__FUNCTION__,"ladder type %d not found",type);
 		return -1;
 	}
 	if (ladder->type != type) {
-		log_error("got bad ladder data");
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad ladder data");
 		return -1;
 	}
 	for (i=0; i< ladder->curr_len; i++) {

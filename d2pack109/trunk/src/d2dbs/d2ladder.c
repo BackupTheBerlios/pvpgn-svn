@@ -44,14 +44,15 @@
 #  include <memory.h>
 # endif
 #endif
-#include <dirent.h>
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_STAT_H
 # include <sys/stat.h>
 #endif
+#ifdef HAVE_SYS_FILE_H
 #include <sys/file.h>
+#endif
 #ifdef HAVE_FCNTL_H
 # include <fcntl.h>
 #else
@@ -63,11 +64,16 @@
 # include <unistd.h>
 #endif
 
+#ifdef WIN32
+# include <io.h>
+#endif
+
 #include "d2ladder.h"
 #include "prefs.h"
 #include "common/tag.h"
 #include "common/list.h"
 #include "common/eventlog.h"
+#include "compat/strncasecmp.h"
 #include "common/setup_after.h"
 #include "d2cs/d2charfile.h"
 
@@ -143,7 +149,7 @@ extern int d2ladder_update(t_d2ladder_info * pcharladderinfo)
 
 int d2ladder_initladderfile(void)
 {
-	int fdladder;
+	FILE * fdladder;
 	t_d2ladderfile_ladderindex lhead[D2LADDER_MAXTYPE];
 	t_d2ladderfile_header fileheader;
 	int start;
@@ -174,22 +180,22 @@ int d2ladder_initladderfile(void)
 	}
 	memset(&emptydata,0,sizeof(emptydata));
 	if (!d2ladder_ladder_file) return -1;
-	fdladder=open(d2ladder_ladder_file,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,S_IREAD | S_IWRITE);
-	if(fdladder!=-1) {
+	fdladder=fopen(d2ladder_ladder_file,"wb");
+	if(fdladder) {
 		bn_int_set(&fileheader.maxtype,maxtype);
 		bn_int_set(&fileheader.checksum,0);
-		write(fdladder,&fileheader,sizeof(fileheader));
-		write(fdladder,lhead,sizeof(lhead));
+		fwrite(&fileheader,1,sizeof(fileheader),fdladder);
+		fwrite(lhead,1,sizeof(lhead),fdladder);
 		for(i=0;i<maxtype;i++) {
 			for(j=0;j<bn_int_get(lhead[i].number);j++) {
-				write(fdladder,&emptydata,sizeof(emptydata));
+				fwrite(&emptydata,1,sizeof(emptydata),fdladder);
 			}
 		}
-		close(fdladder);
+		fclose(fdladder);
 		d2ladder_checksum_set();
 	}
 	else {
-		log_error("error open ladder file %s",d2ladder_ladder_file);
+		eventlog(eventlog_level_error,__FUNCTION__,"error open ladder file %s",d2ladder_ladder_file);
 		return -1;
 	}
 	return 0;
@@ -307,12 +313,20 @@ int d2ladder_check(void)
 	if (!d2ladder_ladder_file) return -1;
 	if (!d2ladder_backup_file) return -1;
 	if(d2ladder_checksum_check()!=1) {
-		log_error("ladder file checksum error,try to use backup file");
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder file checksum error,try to use backup file");
+#ifdef WIN32
+		if (access(d2ladder_ladder_file, 0) == 0) {
+			if (remove(d2ladder_ladder_file)<0) {
+				eventlog(eventlog_level_error,__FUNCTION__,"could not delete ladder file \"%s\" (remove: %s)",d2ladder_ladder_file);
+				return -1;
+			}
+		}
+#endif
 		if (rename(d2ladder_backup_file,d2ladder_ladder_file)==-1) {
-			log_error("error rename %s to %s", d2ladder_backup_file,d2ladder_ladder_file);
+			eventlog(eventlog_level_error,__FUNCTION__,"error rename %s to %s", d2ladder_backup_file,d2ladder_ladder_file);
 		}
 		if(d2ladder_checksum_check()!=1) {
-			log_error("ladder backup file checksum error,rebuild ladder");
+			eventlog(eventlog_level_error,__FUNCTION__,"ladder backup file checksum error,rebuild ladder");
 			if (d2ladder_initladderfile()<0) return -1;
 			else {
 				d2ladder_need_rebuild=1;
@@ -330,7 +344,7 @@ t_d2ladder * d2ladderlist_find_type(unsigned int type)
 	t_elem const * elem;
 
 	if (!d2ladder_list) {
-		log_error("got NULL d2ladder_list");
+		eventlog(eventlog_level_error,__FUNCTION__,"got NULL d2ladder_list");
 		return NULL;
 	}
 
@@ -339,7 +353,7 @@ t_d2ladder * d2ladderlist_find_type(unsigned int type)
 		if (!(d2ladder=elem_get_data(elem))) continue;
 		if (d2ladder->type==type) return d2ladder;
 	}
-	log_error("could not find type %d in d2ladder_list",type);
+	eventlog(eventlog_level_error,__FUNCTION__,"could not find type %d in d2ladder_list",type);
 	return NULL;
 }
 
@@ -363,7 +377,7 @@ extern int d2dbs_d2ladder_init(void)
 		return -1;
 	}
 	if(d2ladder_check()<0) {
-		log_error("ladder file checking error");
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder file checking error");
 		return -1;
 	}
 	if (d2ladder_readladder()<0) {
@@ -382,13 +396,13 @@ int d2ladderlist_init(void)
 
 	if (!d2ladder_ladder_file) return -1;
 	if (!(d2ladder_list=list_create())) {
-		log_error("could not create d2ladder_list");
+		eventlog(eventlog_level_error,__FUNCTION__,"could not create d2ladder_list");
 		return -1;
 	}
 	d2ladder_maxtype=D2LADDER_MAXTYPE;
 	for (i=0;i<d2ladder_maxtype;i++) {
 		if (!(d2ladder=malloc(sizeof(t_d2ladder)))) {
-			log_error("could not allocate d2ladder");
+			eventlog(eventlog_level_error,__FUNCTION__,"could not allocate d2ladder");
 			return -1;
 		}
 		d2ladder->type=i;
@@ -403,7 +417,7 @@ int d2ladder_readladder(void)
 {
 	t_d2ladder 		* d2ladder;
 	t_d2ladderfile_header fileheader;
-	int 			fdladder;
+	FILE * 			fdladder;
 	t_d2ladderfile_ladderindex 	* lhead;
 	t_d2ladderfile_ladderinfo 	* ldata;
 	t_d2ladder_info			* info;
@@ -415,55 +429,56 @@ int d2ladder_readladder(void)
 	unsigned int			i, number;
 
 	if (!d2ladder_ladder_file) return -1;
-	fdladder=open(d2ladder_ladder_file,O_RDONLY|O_BINARY);
-	if(fdladder==-1) {
-		log_error("canot open ladder file");
+	fdladder=fopen(d2ladder_ladder_file,"rb");
+	if(!fdladder) {
+		eventlog(eventlog_level_error,__FUNCTION__,"canot open ladder file");
 		return -1;
 	}
 
-	leftsize=lseek(fdladder,0,SEEK_END);
+	fseek(fdladder,0,SEEK_END);
+	leftsize=ftell(fdladder);
+	rewind(fdladder);
 
 	blocksize=sizeof(fileheader) ;
 	if (leftsize<blocksize) {
-		log_error("file size error");
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"file size error");
+		fclose(fdladder);
 		return -1;
 	}
-	lseek(fdladder,0,SEEK_SET);
 
-	readlen=read(fdladder,&fileheader,sizeof(fileheader));
+	readlen=fread(&fileheader,1,sizeof(fileheader),fdladder);
 	if (readlen<=0) {
-		log_error("file %s read error(read:%s)",d2ladder_ladder_file,strerror(errno));
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"file %s read error(read:%s)",d2ladder_ladder_file,strerror(errno));
+		fclose(fdladder);
 		return -1;
 	}
 	tempmaxtype=bn_int_get(fileheader.maxtype);
 	leftsize-=blocksize;
 
 	if(tempmaxtype>D2LADDER_MAXTYPE) {
-		log_error("ladder type > D2LADDER_MAXTYPE error");
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder type > D2LADDER_MAXTYPE error");
+		fclose(fdladder);
 		return -1;
 	}
 	d2ladder_maxtype=tempmaxtype;
 
 	blocksize=d2ladder_maxtype*sizeof(*lhead);
 	if (leftsize < blocksize ) {
-		log_error("file size error");
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"file size error");
+		fclose(fdladder);
 		return -1;
 	}
 
 	if (!(lhead=malloc(blocksize))) {
-		log_error("could not allocate memory for lhead");
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"could not allocate memory for lhead");
+		fclose(fdladder);
 		return -1;
     	}
-	readlen=read(fdladder,lhead,d2ladder_maxtype*sizeof(*lhead));
+	readlen=fread(lhead,1,d2ladder_maxtype*sizeof(*lhead),fdladder);
 	if (readlen<=0) {
-		log_error("file %s read error(read:%s)",d2ladder_ladder_file,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"file %s read error(read:%s)",d2ladder_ladder_file,strerror(errno));
 		free(lhead);
-		close(fdladder);
+		fclose(fdladder);
 		return -1;
 	}
 	leftsize-=blocksize;
@@ -473,9 +488,9 @@ int d2ladder_readladder(void)
 		blocksize+=bn_int_get(lhead[i].number)*sizeof(*ldata);
 	}
 	if (leftsize < blocksize ) {
-		log_error("file size error");
+		eventlog(eventlog_level_error,__FUNCTION__,"file size error");
 		free(lhead);
-		close(fdladder);
+		fclose(fdladder);
 		return -1;
 	}
 
@@ -484,23 +499,23 @@ int d2ladder_readladder(void)
 		if(number<=0) continue;
 		d2ladder=d2ladderlist_find_type(laddertype);
 		if (!d2ladder) {
-			log_error("could not find ladder type %d",laddertype);
+			eventlog(eventlog_level_error,__FUNCTION__,"could not find ladder type %d",laddertype);
 			continue;
 		}
 		if (!(ldata=malloc(number*sizeof(*ldata)))) {
-			log_error("error allocate memory for ldata");
+			eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for ldata");
 			continue;
 		}
 		if (!(info=malloc(number * sizeof(*info)))) {
-			log_error("error allocate memory for info");
+			eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for info");
 			free(ldata);
 			continue;
 		}
 		memset(info,0,number * sizeof(*info));
-		lseek(fdladder,bn_int_get(lhead[laddertype].offset),SEEK_SET);
-		readlen=read(fdladder,ldata,number*sizeof(*ldata));
+		fseek(fdladder,bn_int_get(lhead[laddertype].offset),SEEK_SET);
+		readlen=fread(ldata,1,number*sizeof(*ldata),fdladder);
 		if (readlen<=0) {
-			log_error("file %s read error(read:%s)",d2ladder_ladder_file,strerror(errno));
+			eventlog(eventlog_level_error,__FUNCTION__,"file %s read error(read:%s)",d2ladder_ladder_file,strerror(errno));
 			free(ldata);
 			free(info);
 			continue;
@@ -525,7 +540,7 @@ int d2ladder_readladder(void)
 	leftsize-=blocksize;
 	
 	free(lhead);
-	close(fdladder);
+	fclose(fdladder);
 	return 0;
 }
 
@@ -684,7 +699,7 @@ extern int d2ladder_saveladder(void)
 {
 	t_d2ladderfile_ladderindex	lhead[D2LADDER_MAXTYPE];
 	t_d2ladderfile_header		fileheader;
-	int				fdladder;
+	FILE				* fdladder;
 	int				start;
 	unsigned int			i,j, number;
 	t_d2ladder			* d2ladder;
@@ -694,7 +709,7 @@ extern int d2ladder_saveladder(void)
 
 /*
 	if(!d2ladder_change_count) {
-		log_debug("ladder data unchanged, skip saving");
+		eventlog(eventlog_level_debug,__FUNCTION__,"ladder data unchanged, skip saving");
 		return 0;
 	}
 */
@@ -712,13 +727,23 @@ extern int d2ladder_saveladder(void)
 	if (!d2ladder_backup_file) return -1;
 
 	if(d2ladder_checksum_check()==1) {
-		log_info("backup ladder file");
-		rename(d2ladder_ladder_file,d2ladder_backup_file);
+		eventlog(eventlog_level_info,__FUNCTION__,"backup ladder file");
+#ifdef WIN32
+		if (access(d2ladder_backup_file, 0) == 0) {
+			if (remove(d2ladder_backup_file)<0) {
+				eventlog(eventlog_level_error,__FUNCTION__,"could not delete backup ladder file \"%s\" (remove: %s)",d2ladder_backup_file);
+				return -1;
+			}
+		}
+#endif
+		if (rename(d2ladder_ladder_file,d2ladder_backup_file)==-1) {
+			eventlog(eventlog_level_warn,__FUNCTION__,"error rename %s to %s", d2ladder_ladder_file, d2ladder_backup_file);
+		}
 	}
 
-	fdladder=open(d2ladder_ladder_file,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,S_IREAD | S_IWRITE);
-	if(fdladder==-1) {
-		log_error("error open ladder file %s",d2ladder_ladder_file);
+	fdladder=fopen(d2ladder_ladder_file,"wb");
+	if(!fdladder) {
+		eventlog(eventlog_level_error,__FUNCTION__,"error open ladder file %s",d2ladder_ladder_file);
 		return -1;
 	}
 
@@ -728,14 +753,14 @@ extern int d2ladder_saveladder(void)
 	  XMLfilename = malloc(strlen(d2dbs_prefs_get_ladder_dir())+1+strlen(XMLname)+1);
 	  if (!XMLfilename) 
 	  { 
-	    log_error("could not alloc mem for XML ladder filename");
+	    eventlog(eventlog_level_error,__FUNCTION__,"could not alloc mem for XML ladder filename");
 	  }
 	  else
 	  {
 	    sprintf(XMLfilename,"%s/%s",d2dbs_prefs_get_ladder_dir(),XMLname);
 	    if (!(XMLfile = fopen(XMLfilename,"w")))
 	    {
-	      log_error("could not open XML ladder file for output");
+	      eventlog(eventlog_level_error,__FUNCTION__,"could not open XML ladder file for output");
 	    }
 	    else
 	    {
@@ -750,14 +775,14 @@ extern int d2ladder_saveladder(void)
 	
 	bn_int_set(&fileheader.maxtype,d2ladder_maxtype);
 	bn_int_set(&fileheader.checksum,0);
-	write(fdladder,&fileheader,sizeof(fileheader));
-	write(fdladder,lhead,sizeof(lhead));
+	fwrite(&fileheader,1,sizeof(fileheader),fdladder);
+	fwrite(lhead,1,sizeof(lhead),fdladder);
 	for(i=0;i<d2ladder_maxtype;i++) {
 		number=bn_int_get(lhead[i].number);
 		if(number<=0) continue;
 		d2ladder=d2ladderlist_find_type(i);
 		if (!(ldata=malloc(number * sizeof(*ldata)))) {
-			log_error("error allocate memory for ldata");
+			eventlog(eventlog_level_error,__FUNCTION__,"error allocate memory for ldata");
 			continue;
 		}
 		memset(ldata,0,number * sizeof(*ldata));
@@ -768,12 +793,12 @@ extern int d2ladder_saveladder(void)
 			bn_byte_set(&ldata[j].class, d2ladder->info[j].class);
 			strncpy(ldata[j].charname,d2ladder->info[j].charname,sizeof(ldata[j].charname));
 		}
-		write(fdladder,ldata,number*sizeof(*ldata));
+		fwrite(ldata,1,number*sizeof(*ldata),fdladder);
 		free(ldata);
 	}
-	close(fdladder);
+	fclose(fdladder);
 	d2ladder_checksum_set();
-	log_info("ladder file saved (%d changes)",d2ladder_change_count);
+	eventlog(eventlog_level_info,__FUNCTION__,"ladder file saved (%d changes)",d2ladder_change_count);
 	d2ladder_change_count=0;
 	return 0;
 }
@@ -859,34 +884,34 @@ int d2ladder_checksum(unsigned char const * data, unsigned int len,unsigned int 
 
 int d2ladder_checksum_set(void)
 {
-	int		fdladder;
+	FILE		* fdladder;
 	off_t		filesize;
 	int		curlen,readlen,len;
 	unsigned char * buffer;
 	bn_int		checksum;
 
 	if (!d2ladder_ladder_file) return -1;
-	fdladder=open(d2ladder_ladder_file,O_RDWR|O_BINARY,0);
-	if(fdladder==-1) {
-		log_error("error open ladder file %s",d2ladder_ladder_file);
+	fdladder=fopen(d2ladder_ladder_file,"r+b");
+	if(!fdladder) {
+		eventlog(eventlog_level_error,__FUNCTION__,"error open ladder file %s",d2ladder_ladder_file);
 		return -1;
 	}
-	filesize=lseek(fdladder,0,SEEK_END);
+	fseek(fdladder,0,SEEK_END);
+	filesize=ftell(fdladder);
+	rewind(fdladder);
 	if(filesize==(off_t)-1) {
-		log_error("lseek() error in ladder file %s",d2ladder_ladder_file);
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"lseek() error in ladder file %s",d2ladder_ladder_file);
+		fclose(fdladder);
 		return -1;
 	}
 	if(filesize<(signed)sizeof(t_d2ladderfile_header)) {
-		log_error("ladder file size error :%s",d2ladder_ladder_file);
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder file size error :%s",d2ladder_ladder_file);
+		fclose(fdladder);
 		return -1;
 	}
-	lseek(fdladder,0,SEEK_SET);
-
 	if (!(buffer=malloc(filesize))) {
-		close(fdladder);
-		log_error("could not allocate memory for buffer");
+		fclose(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"could not allocate memory for buffer");
 		return -1;
 	}
 
@@ -896,27 +921,27 @@ int d2ladder_checksum_set(void)
 		    len = 2000;
 		else
 		    len = filesize-curlen;
-		readlen=read(fdladder,buffer+curlen,len);
+		readlen=fread(buffer+curlen,1,len,fdladder);
 		if (readlen<=0) {
 			free(buffer);
-			close(fdladder);
-			log_error("got bad save file or read error(read:%s)",strerror(errno));
+			fclose(fdladder);
+			eventlog(eventlog_level_error,__FUNCTION__,"got bad save file or read error(read:%s)",strerror(errno));
 			return -1;
 		}
 		curlen+=readlen;
 	}
 
 	bn_int_set(&checksum,d2ladder_checksum(buffer,filesize,LADDERFILE_CHECKSUM_OFFSET));
-	lseek(fdladder,LADDERFILE_CHECKSUM_OFFSET,SEEK_SET);
-	write(fdladder,&checksum,sizeof(checksum));
+	fseek(fdladder,LADDERFILE_CHECKSUM_OFFSET,SEEK_SET);
+	fwrite(&checksum,1,sizeof(checksum),fdladder);
 	free(buffer);
-	close(fdladder);
+	fclose(fdladder);
 	return 0;
 }
 
 int d2ladder_checksum_check(void)
 {
-	int		fdladder;
+	FILE		* fdladder;
 	off_t		filesize;
 	int		curlen,readlen,len;
 	unsigned char	* buffer;
@@ -924,27 +949,27 @@ int d2ladder_checksum_check(void)
 	t_d2ladderfile_header	* header;
 
 	if (!d2ladder_ladder_file) return -1;
-	fdladder=open(d2ladder_ladder_file,O_RDWR|O_BINARY,0);
-	if(fdladder==-1) {
-		log_error("error open ladder file %s",d2ladder_ladder_file);
+	fdladder=fopen(d2ladder_ladder_file,"rb");
+	if(!fdladder) {
+		eventlog(eventlog_level_error,__FUNCTION__,"error open ladder file %s",d2ladder_ladder_file);
 		return -1;
 	}
-	filesize=lseek(fdladder,0,SEEK_END);
+	fseek(fdladder,0,SEEK_END);
+	filesize=ftell(fdladder);
+	rewind(fdladder);
 	if(filesize==(off_t)-1) {
-		log_error("lseek() error in  ladder file %s",d2ladder_ladder_file);
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"lseek() error in  ladder file %s",d2ladder_ladder_file);
+		fclose(fdladder);
 		return -1;
 	}
 	if(filesize<(signed)sizeof(t_d2ladderfile_header)) {
-		log_error("ladder file size error :%s",d2ladder_ladder_file);
-		close(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"ladder file size error :%s",d2ladder_ladder_file);
+		fclose(fdladder);
 		return -1;
 	}
-	lseek(fdladder,0,SEEK_SET);
-
 	if (!(buffer=malloc(filesize))) {
-		close(fdladder);
-		log_error("could not allocate memory for buffer");
+		fclose(fdladder);
+		eventlog(eventlog_level_error,__FUNCTION__,"could not allocate memory for buffer");
 		return -1;
 	}
 	header=(t_d2ladderfile_header *)buffer;
@@ -954,26 +979,26 @@ int d2ladder_checksum_check(void)
 		    len = 2000;
 		else
 		    len = filesize-curlen;
-		readlen=read(fdladder,buffer+curlen,len);
+		readlen=fread(buffer+curlen,1,len,fdladder);
 		if (readlen<=0) {
 			free(buffer);
-			close(fdladder);
-			log_error("got bad save file or read error(read:%s)",strerror(errno));
+			fclose(fdladder);
+			eventlog(eventlog_level_error,__FUNCTION__,"got bad save file or read error(read:%s)",strerror(errno));
 			return -1;
 		}
 		curlen+=readlen;
 	} 
-	close(fdladder);
+	fclose(fdladder);
 
 	oldchecksum=bn_int_get(header->checksum);
 	checksum=d2ladder_checksum(buffer,filesize,LADDERFILE_CHECKSUM_OFFSET);
 	free(buffer);
 
 	if(oldchecksum==checksum) {
-		log_info("ladder file check pass (checksum=0x%X)",checksum);
+		eventlog(eventlog_level_info,__FUNCTION__,"ladder file check pass (checksum=0x%X)",checksum);
 		return 1;
 	} else {
-		log_debug("ladder file checksum mismatch 0x%X - 0x%X",oldchecksum, checksum);
+		eventlog(eventlog_level_debug,__FUNCTION__,"ladder file checksum mismatch 0x%X - 0x%X",oldchecksum, checksum);
 		return 0;
 	}
 }

@@ -80,7 +80,7 @@ extern int handle_bnetd_init(t_connection * c)
 	queue_push_packet(d2cs_conn_get_out_queue(c),packet);
 	packet_del_ref(packet);
 	d2cs_conn_set_state(c,conn_state_connected);
-	log_info("sent init class packet to bnetd");
+	eventlog(eventlog_level_info,__FUNCTION__,"sent init class packet to bnetd");
 	return 0;
 }
 
@@ -90,7 +90,7 @@ static int on_bnetd_authreq(t_connection * c, t_packet * packet)
 	unsigned int	sessionnum;
 
 	sessionnum=bn_int_get(packet->u.bnetd_d2cs_authreq.sessionnum);
-	log_info("received bnetd sessionnum %d",sessionnum);
+	eventlog(eventlog_level_info,__FUNCTION__,"received bnetd sessionnum %d",sessionnum);
 	if ((rpacket=packet_create(packet_class_d2cs_bnetd))) {
 		packet_set_size(rpacket,sizeof(t_d2cs_bnetd_authreply));
 		packet_set_type(rpacket,D2CS_BNETD_AUTHREPLY);
@@ -109,10 +109,10 @@ static int on_bnetd_authreply(t_connection * c, t_packet * packet)
 
 	reply=bn_int_get(packet->u.bnetd_d2cs_authreply.reply);
 	if (reply == BNETD_D2CS_AUTHREPLY_SUCCEED) {
-		log_info("authed by bnetd");
+		eventlog(eventlog_level_info,__FUNCTION__,"authed by bnetd");
 		d2cs_conn_set_state(c,conn_state_authed);
 	} else {
-		log_error("failed to auth by bnetd (error=%d)",reply);
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to auth by bnetd (error=%d)",reply);
 		d2cs_conn_set_state(c,conn_state_destroy);
 	}
 	return 0;
@@ -132,16 +132,16 @@ static int on_bnetd_accountloginreply(t_connection * c, t_packet * packet)
 
 	seqno=bn_int_get(packet->u.d2cs_bnetd.h.seqno);
 	if (!(sq=sqlist_find_sq(seqno))) {
-		log_error("seqno %d not found",seqno);
+		eventlog(eventlog_level_error,__FUNCTION__,"seqno %d not found",seqno);
 		return -1;
 	}
 	if (!(client=d2cs_connlist_find_connection_by_sessionnum(sq_get_clientid(sq)))) {
-		log_error("client %d not found",sq_get_clientid(sq));
+		eventlog(eventlog_level_error,__FUNCTION__,"client %d not found",sq_get_clientid(sq));
 		sq_destroy(sq);
 		return -1;
 	}
 	if (!(opacket=sq_get_packet(sq))) {
-		log_error("previous packet missing (seqno: %d)",seqno);
+		eventlog(eventlog_level_error,__FUNCTION__,"previous packet missing (seqno: %d)",seqno);
 		sq_destroy(sq);
 		return -1;
 	}
@@ -151,9 +151,9 @@ static int on_bnetd_accountloginreply(t_connection * c, t_packet * packet)
 		account=packet_get_str_const(opacket,sizeof(t_client_d2cs_loginreq),MAX_CHARNAME_LEN);
 		d2cs_conn_set_account(client,account);
 		d2cs_conn_set_state(client,conn_state_authed);
-		log_info("account %s authed",account);
+		eventlog(eventlog_level_info,__FUNCTION__,"account %s authed",account);
 	} else {
-		log_warn("client %d login request was rejected by bnetd",sq_get_clientid(sq));
+		eventlog(eventlog_level_warn,__FUNCTION__,"client %d login request was rejected by bnetd",sq_get_clientid(sq));
 		reply=D2CS_CLIENT_LOGINREPLY_BADPASS;
 	}
 	if ((rpacket=packet_create(packet_class_d2cs))) {
@@ -181,16 +181,16 @@ static int on_bnetd_charloginreply(t_connection * c, t_packet * packet)
 	
 	seqno=bn_int_get(packet->u.d2cs_bnetd.h.seqno);
 	if (!(sq=sqlist_find_sq(seqno))) {
-		log_error("seqno %d not found",seqno);
+		eventlog(eventlog_level_error,__FUNCTION__,"seqno %d not found",seqno);
 		return -1;
 	}
 	if (!(client=d2cs_connlist_find_connection_by_sessionnum(sq_get_clientid(sq)))) {
-		log_error("client %d not found",sq_get_clientid(sq));
+		eventlog(eventlog_level_error,__FUNCTION__,"client %d not found",sq_get_clientid(sq));
 		sq_destroy(sq);
 		return -1;
 	}
 	if (!(opacket=sq_get_packet(sq))) {
-		log_error("previous packet missing (seqno: %d)",seqno);
+		eventlog(eventlog_level_error,__FUNCTION__,"previous packet missing (seqno: %d)",seqno);
 		sq_destroy(sq);
 		return -1;
 	}
@@ -200,17 +200,17 @@ static int on_bnetd_charloginreply(t_connection * c, t_packet * packet)
 		charname=packet_get_str_const(opacket,sizeof(t_client_d2cs_createcharreq),MAX_CHARNAME_LEN);
 		if (result==BNETD_D2CS_CHARLOGINREPLY_SUCCEED) {
 			if (conn_check_multilogin(client,charname)<0) {
-				log_error("character %s is already logged in",charname);
+				eventlog(eventlog_level_error,__FUNCTION__,"character %s is already logged in",charname);
 				reply = D2CS_CLIENT_CHARLOGINREPLY_FAILED;
 			} else {
 				reply= D2CS_CLIENT_CREATECHARREPLY_SUCCEED;
-				log_info("character %s authed",charname);
+				eventlog(eventlog_level_info,__FUNCTION__,"character %s authed",charname);
 				d2cs_conn_set_charname(client,charname);
 				d2cs_conn_set_state(client,conn_state_char_authed);
 			}
 		} else {
 			reply = D2CS_CLIENT_CREATECHARREPLY_FAILED;
-			log_error("failed to auth character %s",charname);
+			eventlog(eventlog_level_error,__FUNCTION__,"failed to auth character %s",charname);
 		}
 		if ((rpacket=packet_create(packet_class_d2cs))) {
 			packet_set_size(rpacket,sizeof(t_d2cs_client_createcharreply));
@@ -223,17 +223,17 @@ static int on_bnetd_charloginreply(t_connection * c, t_packet * packet)
 		charname=packet_get_str_const(opacket,sizeof(t_client_d2cs_charloginreq),MAX_CHARNAME_LEN);
 		if (result==BNETD_D2CS_CHARLOGINREPLY_SUCCEED) {
 			if (conn_check_multilogin(client,charname)<0) {
-				log_error("character %s is already logged in",charname);
+				eventlog(eventlog_level_error,__FUNCTION__,"character %s is already logged in",charname);
 				reply = D2CS_CLIENT_CHARLOGINREPLY_FAILED;
 			} else {
 				reply = D2CS_CLIENT_CHARLOGINREPLY_SUCCEED;
-				log_info("character %s authed",charname);
+				eventlog(eventlog_level_info,__FUNCTION__,"character %s authed",charname);
 				d2cs_conn_set_charname(client,charname);
 				d2cs_conn_set_state(client,conn_state_char_authed);
 			}
 		} else {
 			reply = D2CS_CLIENT_CHARLOGINREPLY_FAILED;
-			log_error("failed to auth character %s",charname);
+			eventlog(eventlog_level_error,__FUNCTION__,"failed to auth character %s",charname);
 		}
 		if ((rpacket=packet_create(packet_class_d2cs))) {
 			packet_set_size(rpacket,sizeof(t_d2cs_client_charloginreply));
@@ -243,7 +243,7 @@ static int on_bnetd_charloginreply(t_connection * c, t_packet * packet)
 			packet_del_ref(rpacket);
 		}
 	} else {
-		log_error("got bad packet type %d",type);
+		eventlog(eventlog_level_error,__FUNCTION__,"got bad packet type %d",type);
 		sq_destroy(sq);
 		return -1;
 	}

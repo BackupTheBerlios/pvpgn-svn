@@ -18,26 +18,14 @@
 #ifndef INLCUDED_D2DBS_SETUP_H
 #define INLCUDED_D2DBS_SETUP_H
 
-#ifndef  MAX_PATH
+#if !defined(MAX_PATH) && !defined(WIN32)
 # define MAX_PATH		1024
 #endif
 
-#ifndef  O_BINARY
-# define O_BINARY		0
+#ifndef WIN32
+typedef unsigned int		BOOL;
 #endif
 
-/* FIXME: these won't work in ANSI or K&R C */
-#define log_none(fmt...)  eventlog(eventlog_level_none,  __FUNCTION__, fmt)
-#define log_trace(fmt...) eventlog(eventlog_level_trace, __FUNCTION__, fmt)
-#define log_debug(fmt...) eventlog(eventlog_level_debug, __FUNCTION__, fmt)
-#define log_info(fmt...)  eventlog(eventlog_level_info,  __FUNCTION__, fmt)
-#define log_warn(fmt...)  eventlog(eventlog_level_warn,  __FUNCTION__, fmt)
-#define log_error(fmt...) eventlog(eventlog_level_error, __FUNCTION__, fmt)
-#define log_fatal(fmt...) eventlog(eventlog_level_fatal, __FUNCTION__, fmt)
-#define log_d2gs(fmt...)  eventlog_step(prefs_get_logfile_gs(), eventlog_level_info, __FUNCTION__, fmt)
-
-typedef int			SOCKET;
-typedef unsigned int		BOOL;
 #define TRUE			1
 #define FALSE			0
 #define tf(a)			((a)?1:0)
@@ -61,6 +49,9 @@ typedef unsigned int		BOOL;
 #define D2DBS_CHARSAVEBAK_DIR		"/usr/local/var/bak/charsave"
 #define D2DBS_CHARINFOBAK_DIR		"/usr/local/var/bak/charinfo"
 #define D2DBS_LADDER_DIR		"/usr/local/var/ladders"
+#ifndef D2DBS_DEFAULT_CONF_FILE
+# define D2DBS_DEFAULT_CONF_FILE "conf/d2dbs.conf"
+#endif
 #define DEFAULT_MEMLOG_FILE		"/tmp/d2dbs-mem.log"
 #define DEFAULT_LISTEN_PORT		6114
 #define D2DBS_SERVER_ADDRS		"0.0.0.0"

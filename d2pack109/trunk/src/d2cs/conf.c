@@ -44,6 +44,7 @@
 # endif
 #endif
 #include "compat/strcasecmp.h"
+#include "compat/strtoul.h"
 #include "compat/memset.h"
 #include "compat/strdup.h"
 #include <errno.h>
@@ -117,7 +118,7 @@ static int conf_set_default(t_conf_table * conf_table, void * param_data, int da
 	memset(param_data,0,datalen);
 	for (i=0; conf_table[i].name; i++) {
 		if (conf_table[i].offset + conf_type_get_size(conf_table[i].type) > datalen) {
-			log_error("conf table item %d bad offset %d exceed %d",i,conf_table[i].offset,datalen);
+			eventlog(eventlog_level_error,__FUNCTION__,"conf table item %d bad offset %d exceed %d",i,conf_table[i].offset,datalen);
 			return -1;
 		}
 		p=(char *)param_data+conf_table[i].offset;
@@ -127,7 +128,7 @@ static int conf_set_default(t_conf_table * conf_table, void * param_data, int da
 			CASE(conf_type_str,  conf_str_set(p, (char *)conf_table[i].def_value));
 			CASE(conf_type_hexstr,  conf_hexstr_set(p, (char *)conf_table[i].def_value));
 			default:
-				log_error("conf table item %d bad type %d",i,conf_table[i].type);
+				eventlog(eventlog_level_error,__FUNCTION__,"conf table item %d bad type %d",i,conf_table[i].type);
 				return -1;
 		}
 	}
@@ -148,7 +149,7 @@ static int conf_set_value(t_conf_table * conf, void * param_data, char * value)
 		CASE(conf_type_str,  conf_str_set(p, value));
 		CASE(conf_type_hexstr,  conf_hexstr_set(p, value));
 		default:
-			log_error("got bad conf type %d",conf->type);
+			eventlog(eventlog_level_error,__FUNCTION__,"got bad conf type %d",conf->type);
 			return -1;
 	}
 	return 0;
@@ -165,7 +166,7 @@ static int conf_type_get_size(e_conf_type type)
 		case conf_type_hexstr:
 			return sizeof(char *);
 		default:
-			log_error("got bad conf type %d",type);
+			eventlog(eventlog_level_error,__FUNCTION__,"got bad conf type %d",type);
 			return 0;
 	}
 }
@@ -181,7 +182,7 @@ extern int conf_parse_param(int argc, char ** argv, t_conf_table * conf_table, v
 	ASSERT(argv,-1);
 	ASSERT(data, -1);
 	if (conf_set_default(conf_table, data, datalen)<0) {
-		log_error("error setting default values");
+		eventlog(eventlog_level_error,__FUNCTION__,"error setting default values");
 		return -1;
 	}
 	for (i=1; i< argc; i++) {
@@ -196,7 +197,7 @@ extern int conf_parse_param(int argc, char ** argv, t_conf_table * conf_table, v
 						break;
 					case conf_type_int:
 						if (i+1>=argc) {
-							log_error("got bad int conf %s without value",argv[i]);
+							eventlog(eventlog_level_error,__FUNCTION__,"got bad int conf %s without value",argv[i]);
 							break;
 						}
 						i++;
@@ -204,7 +205,7 @@ extern int conf_parse_param(int argc, char ** argv, t_conf_table * conf_table, v
 						break;
 					case conf_type_str:
 						if (i+1>=argc) {
-							log_error("got bad str conf %s without value",argv[i]);
+							eventlog(eventlog_level_error,__FUNCTION__,"got bad str conf %s without value",argv[i]);
 							break;
 						}
 						i++;
@@ -212,21 +213,21 @@ extern int conf_parse_param(int argc, char ** argv, t_conf_table * conf_table, v
 						break;
 					case conf_type_hexstr:
 						if (i+1>=argc) {
-							log_error("got bad hexstr conf %s without value",argv[i]);
+							eventlog(eventlog_level_error,__FUNCTION__,"got bad hexstr conf %s without value",argv[i]);
 							break;
 						}
 						i++;
 						conf_hexstr_set(p,argv[i]);
 						break;
 					default:
-						log_error("got bad conf type %d",conf_table[i].type);
+						eventlog(eventlog_level_error,__FUNCTION__,"got bad conf type %d",conf_table[i].type);
 						break;
 				}
 				break;
 			}
 		}
 		if (!match) {
-			log_error("bad option \"%s\"",argv[i]);
+			eventlog(eventlog_level_error,__FUNCTION__,"bad option \"%s\"",argv[i]);
 			return -1;
 		}
 	}
@@ -243,12 +244,12 @@ extern int conf_load_file(char const * filename, t_conf_table * conf_table, void
 	ASSERT(conf_table,-1);
 	ASSERT(param_data,-1);
 	if (conf_set_default(conf_table, param_data, datalen)<0) {
-		log_error("error setting default values");
+		eventlog(eventlog_level_error,__FUNCTION__,"error setting default values");
 		return -1;
 	}
 	if (!filename) return 0;
 	if (!(fp=fopen(filename,"r"))) {
-		log_error("could not open configuration file \"%s\" for reading (fopen: %s)",filename,strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"could not open configuration file \"%s\" for reading (fopen: %s)",filename,strerror(errno));
 		return -1;
 	}
 	for (line=1; (buff=file_get_line(fp)); line++) {
@@ -266,12 +267,12 @@ extern int conf_load_file(char const * filename, t_conf_table * conf_table, void
 			continue;
 		}
 		if (count!=3) {
-			log_error("bad item count %d in file %s line %d",count,filename,line);
+			eventlog(eventlog_level_error,__FUNCTION__,"bad item count %d in file %s line %d",count,filename,line);
 			free(item);
 			continue;
 		}
 		if (strcmp(item[1],"=")) {
-			log_error("missing '=' in file %s line %d",filename,line);
+			eventlog(eventlog_level_error,__FUNCTION__,"missing '=' in file %s line %d",filename,line);
 			free(item);
 			continue;
 		}
@@ -283,7 +284,7 @@ extern int conf_load_file(char const * filename, t_conf_table * conf_table, void
 			}
 		}
 		if (!match) {
-			log_warn("got unknown field \"%s\" in line %d,(ignored)",item[0],line);
+			eventlog(eventlog_level_warn,__FUNCTION__,"got unknown field \"%s\" in line %d,(ignored)",item[0],line);
 		}
 		free(item);
 	}
@@ -300,7 +301,7 @@ extern int conf_cleanup(t_conf_table * conf_table, void * param_data, int datale
 	ASSERT(param_data,-1);
 	for (i=0; conf_table[i].name; i++) {
 		if (conf_table[i].offset + conf_type_get_size(conf_table[i].type) > datalen) {
-			log_error("conf table item %d bad offset %d exceed %d",i,conf_table[i].offset,datalen);
+			eventlog(eventlog_level_error,__FUNCTION__,"conf table item %d bad offset %d exceed %d",i,conf_table[i].offset,datalen);
 			return -1;
 		}
 		
@@ -311,7 +312,7 @@ extern int conf_cleanup(t_conf_table * conf_table, void * param_data, int datale
 			CASE(conf_type_str,  conf_str_set(p, NULL));
 			CASE(conf_type_hexstr,  conf_hexstr_set(p, NULL));
 			default:
-				log_error("conf table item %d bad type %d",i,conf_table[i].type);
+				eventlog(eventlog_level_error,__FUNCTION__,"conf table item %d bad type %d",i,conf_table[i].type);
 				return -1;
 		}
 	}

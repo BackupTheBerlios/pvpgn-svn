@@ -61,7 +61,6 @@ extern t_packet * packet_create(t_packet_class class)
     if (class!=packet_class_init &&
 	class!=packet_class_bnet &&
 	class!=packet_class_file &&
-	class!=packet_class_bits &&
 	class!=packet_class_udp &&
 	class!=packet_class_raw &&
 	class!=packet_class_d2game &&
@@ -150,8 +149,6 @@ extern t_packet_class packet_get_class(t_packet const * packet)
         return packet_class_bnet;
     case packet_class_file:
         return packet_class_file;
-    case packet_class_bits:
-	return packet_class_bits;
     case packet_class_udp:
 	return packet_class_udp;
     case packet_class_raw:
@@ -193,8 +190,6 @@ extern char const * packet_get_class_str(t_packet const * packet)
         return "bnet";
     case packet_class_file:
         return "file";
-    case packet_class_bits:
-        return "bits";
     case packet_class_udp:
         return "udp";
     case packet_class_raw:
@@ -235,7 +230,6 @@ extern int packet_set_class(t_packet * packet, t_packet_class class)
     if (class!=packet_class_init &&
 	class!=packet_class_bnet &&
 	class!=packet_class_file &&
-	class!=packet_class_bits &&
 	class!=packet_class_udp &&
 	class!=packet_class_raw &&
 	class!=packet_class_d2game &&
@@ -282,14 +276,6 @@ extern unsigned int packet_get_type(t_packet const * packet)
 	    return 0;
 	}
 	return (unsigned int)bn_short_get(packet->u.file.h.type);
-	
-    case packet_class_bits:
-	if (packet_get_size(packet)<sizeof(t_bits_header))
-	{
-	    eventlog(eventlog_level_error,"packet_get_type","bits packet is shorter than header (len=%u)",packet_get_size(packet));
-	    return 0;
-	}
-	return (unsigned int)bn_short_get(packet->u.bits.h.type);
 	
     case packet_class_udp:
 	if (packet_get_size(packet)<sizeof(t_udp_header))
@@ -509,9 +495,6 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 	    }
 	    return "unknown";
 	    
-	case packet_class_bits:
-	    return packet_get_type_str(packet,packet_dir_from_server);
-	
 	case packet_class_udp:
 	    if (packet_get_size(packet)<sizeof(t_udp_header))
 	    {
@@ -716,111 +699,6 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 	    }
 	    return "unknown";
 	    
-	case packet_class_bits:
-	    if (packet_get_size(packet)<sizeof(t_bits_header))
-	    {
-		eventlog(eventlog_level_error,"packet_get_type_str","packet is shorter than bits header (len=%u)",packet_get_size(packet));
-		return "unknown";
-	    }
-	    switch (bn_short_get(packet->u.bits.h.type))
-	    {
-	    case BITS_SESSION_REQUEST:
-		return "BITS_SESSION_REQUEST";
-	    case BITS_SESSION_REPLY:
-		return "BITS_SESSION_REPLY";
-	    case BITS_AUTH_REQUEST:
-		return "BITS_AUTH_REQUEST";
-	    case BITS_AUTH_REPLY:
-		return "BITS_AUTH_REPLY";
-	    case BITS_MASTER_AUTH_REQUEST:
-		return "BITS_MASTER_AUTH_REQUEST";
-	    case BITS_MASTER_AUTH_REPLY:
-		return "BITS_MASTER_AUTH_REPLY";
-	    case BITS_VA_CREATE_REQ:
-		return "BITS_VA_CREATE_REQ";
-	    case BITS_VA_CREATE_REPLY:
-		return "BITS_VA_CREATE_REPLY";
-	    case BITS_VA_SET_ATTR:
-		return "BITS_VA_SET_ATTR";
-	    case BITS_VA_GET_ATTR:
-		return "BITS_VA_GET_ATTR";
-	    case BITS_VA_ATTR:
-		return "BITS_VA_ATTR";
-	    case BITS_VA_GET_ALLATTR:
-		return "BITS_VA_GET_ALLATTR";
-	    case BITS_VA_ALLATTR:
-		return "BITS_VA_ALLATTR";
-	    case BITS_VA_LOCK:
-		return "BITS_VA_LOCK";
-	    case BITS_VA_LOCK_ACK:
-		return "BITS_VA_LOCK_ACK";
-	    case BITS_VA_UNLOCK:
-		return "BITS_VA_UNLOCK";
-	    case BITS_VA_LOGINREQ:
-		return "BITS_VA_LOGINREQ";
-	    case BITS_VA_LOGINREPLY:
-		return "BITS_VA_LOGINREPLY";
-	    case BITS_VA_LOGOUT:
-		return "BITS_VA_LOGOUT";
-	    case BITS_VA_LOGIN:
-		return "BITS_VA_LOGIN";
-	    case BITS_VA_UPDATE_PLAYERINFO:
-		return "BITS_VA_UPDATE_PLAYERINFO";
-	    case BITS_NET_DISCOVER:
-		return "BITS_NET_DISCOVER";
-	    case BITS_NET_UNDISCOVER:
-		return "BITS_NET_UNDISCOVER";
-	    case BITS_NET_PING:
-		return "BITS_NET_PING";
-	    case BITS_NET_PONG:
-		return "BITS_NET_PONG";
-	    case BITS_NET_MOTD:
-		return "BITS_NET_MOTD";
-	    case BITS_CHAT_USER:
-		return "BITS_CHAT_USER";
-	    case BITS_CHAT_CHANNELLIST_ADD:
-		return "BITS_CHAT_CHANNELLIST_ADD";
-	    case BITS_CHAT_CHANNELLIST_DEL:
-		return "BITS_CHAT_CHANNELLIST_DEL";
-	    case BITS_CHAT_CHANNEL_JOIN_REQUEST:
-		return "BITS_CHAT_CHANNEL_JOIN_REQUEST";
-	    case BITS_CHAT_CHANNEL_JOIN_NEW_REQUEST:
-		return "BITS_CHAT_CHANNEL_JOIN_NEW_REQUEST";
-	    case BITS_CHAT_CHANNEL_JOIN_PERM_REQUEST:
-		return "BITS_CHAT_CHANNEL_JOIN_PERM_REQUEST";
-	    case BITS_CHAT_CHANNEL_JOIN_REPLY:
-		return "BITS_CHAT_CHANNEL_JOIN_REPLY";
-	    case BITS_CHAT_CHANNEL_LEAVE:
-		return "BITS_CHAT_CHANNEL_LEAVE";
-	    case BITS_CHAT_CHANNEL_JOIN:
-		return "BITS_CHAT_CHANNEL_JOIN";
-	    case BITS_CHAT_CHANNEL_SERVER_JOIN:
-		return "BITS_CHAT_CHANNEL_SERVER_JOIN";
-	    case BITS_CHAT_CHANNEL_SERVER_LEAVE:
-		return "BITS_CHAT_CHANNEL_SERVER_LEAVE";
-	    case BITS_CHAT_CHANNEL:
-		return "BITS_CHAT_CHANNEL";
-	    case BITS_GAMELIST_ADD:
-		return "BITS_GAMELIST_ADD";
-	    case BITS_GAMELIST_DEL:
-		return "BITS_GAMELIST_DEL";
-	    case BITS_GAME_UPDATE:
-		return "BITS_GAME_UPDATE";
-	    case BITS_GAME_JOIN_REQUEST:
-		return "BITS_GAME_JOIN_REQUEST";
-	    case BITS_GAME_JOIN_REPLY:
-		return "BITS_GAME_JOIN_REPLY";
-	    case BITS_GAME_LEAVE:
-		return "BITS_GAME_LEAVE";
-	    case BITS_GAME_CREATE_REQUEST:
-		return "BITS_GAME_CREATE_REQUEST";
-	    case BITS_GAME_CREATE_REPLY:
-		return "BITS_GAME_CREATE_REPLY";
-	    case BITS_GAME_REPORT:
-	    	return "BITS_GAME_REPORT";
-	    default:
-		return "unknown";
-	    }
 	case packet_class_udp:
 	    if (packet_get_size(packet)<sizeof(t_udp_header))
 	    {
@@ -954,15 +832,6 @@ extern int packet_set_type(t_packet * packet, unsigned int type)
 	bn_short_set(&packet->u.file.h.type,(unsigned short)type);
 	return 0;
 	
-    case packet_class_bits:
-	if (packet_get_size(packet)<sizeof(t_bits_header))
-	{
-	    eventlog(eventlog_level_error,"packet_set_type","bits packet is shorter than header (len=%u)",packet_get_size(packet));
-	    return -1;
-	}
-	bn_short_set(&packet->u.bits.h.type,(unsigned short)type);
-	return 0;
-	
     case packet_class_udp:
 	if (packet_get_size(packet)<sizeof(t_udp_header))
 	{
@@ -1066,9 +935,6 @@ extern unsigned int packet_get_size(t_packet const * packet)
     case packet_class_file:
         size = (unsigned int)bn_short_get(packet->u.file.h.size);
 	break;
-    case packet_class_bits:
-	size = (unsigned int)bn_short_get(packet->u.bits.h.size);
-	break;
     case packet_class_udp:
 	size = packet->len;
 	break;
@@ -1146,14 +1012,6 @@ extern int packet_set_size(t_packet * packet, unsigned int size)
 	}
         bn_short_set(&packet->u.file.h.size,size);
         return 0;
-    case packet_class_bits:
-	if (size!=0 && size<sizeof(t_bits_header))
-	{
-	    eventlog(eventlog_level_error,"packet_set_size","invalid size %u for bits packet",size);
-	    return -1;
-	}
-	bn_short_set(&packet->u.bits.h.size,size);
-	return 0;
     case packet_class_udp:
 	if (size!=0 && size<sizeof(t_udp_header))
 	{
@@ -1216,8 +1074,6 @@ extern unsigned int packet_get_header_size(t_packet const * packet)
         return sizeof(t_bnet_header);
     case packet_class_file:
         return sizeof(t_file_header);
-    case packet_class_bits:
-        return sizeof(t_bits_header);
     case packet_class_udp:
         return sizeof(t_udp_header);
     case packet_class_raw:

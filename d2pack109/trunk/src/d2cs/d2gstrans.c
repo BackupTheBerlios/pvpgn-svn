@@ -65,18 +65,18 @@ extern int d2gstrans_load(char const * filename)
     
     if (!filename)
     {
-        eventlog(eventlog_level_error,"d2gstrans_load","got NULL filename");
+        eventlog(eventlog_level_error,__FUNCTION__,"got NULL filename");
         return -1;
     }
     
     if (!(d2gstrans_head = list_create()))
     {
-        eventlog(eventlog_level_error,"d2gstrans_load","could not create list");
+        eventlog(eventlog_level_error,__FUNCTION__,"could not create list");
         return -1;
     }
     if (!(fp = fopen(filename,"r")))
     {
-        eventlog(eventlog_level_error,"d2gstrans_load","could not open file \"%s\" for reading (fopen: %s)",filename,strerror(errno));
+        eventlog(eventlog_level_error,__FUNCTION__,"could not open file \"%s\" for reading (fopen: %s)",filename,strerror(errno));
 	list_destroy(d2gstrans_head);
 	d2gstrans_head = NULL;
         return -1;
@@ -102,13 +102,13 @@ extern int d2gstrans_load(char const * filename)
         }
 	if (!(server = strtok(buff," \t"))) /* strtok modifies the string it is passed */
 	{
-	    eventlog(eventlog_level_error,"d2gstrans_load","missing server on line %u of file \"%s\"",line,filename);
+	    eventlog(eventlog_level_error,__FUNCTION__,"missing server on line %u of file \"%s\"",line,filename);
 	    free(buff);
 	    continue;
 	}
 	if (!(output = strtok(NULL," \t")))
 	{
-	    eventlog(eventlog_level_error,"d2gstrans_load","missing output on line %u of file \"%s\"",line,filename);
+	    eventlog(eventlog_level_error,__FUNCTION__,"missing output on line %u of file \"%s\"",line,filename);
 	    free(buff);
 	    continue;
 	}
@@ -117,20 +117,20 @@ extern int d2gstrans_load(char const * filename)
 
 	if (!(entry = malloc(sizeof(t_d2gstrans))))
 	{
-	    eventlog(eventlog_level_error,"d2gstrans_load","could not allocate memory for entry");
+	    eventlog(eventlog_level_error,__FUNCTION__,"could not allocate memory for entry");
 	    free(buff);
 	    continue;
 	}
 	if (!(entry->server = addr_create_str(server,0,4000)))
 	{
-	    eventlog(eventlog_level_error,"d2gstrans_load","could not allocate memory for server address");
+	    eventlog(eventlog_level_error,__FUNCTION__,"could not allocate memory for server address");
 	    free(entry);
 	    free(buff);
 	    continue;
 	}
 	if (!(entry->output = addr_create_str(output,0,4000)))
 	{
-	    eventlog(eventlog_level_error,"d2gstrans_load","could not allocate memory for output address");
+	    eventlog(eventlog_level_error,__FUNCTION__,"could not allocate memory for output address");
 	    addr_destroy(entry->server);
 	    free(entry);
 	    free(buff);
@@ -138,7 +138,7 @@ extern int d2gstrans_load(char const * filename)
 	}
 	if (!(entry->exclude = netaddr_create_str(exclude)))
 	{
-	    eventlog(eventlog_level_error,"d2gstrans_load","could not allocate memory for exclude address");
+	    eventlog(eventlog_level_error,__FUNCTION__,"could not allocate memory for exclude address");
 	    addr_destroy(entry->output);
 	    addr_destroy(entry->server);
 	    free(entry);
@@ -150,7 +150,7 @@ extern int d2gstrans_load(char const * filename)
 
 	if (list_append_data(d2gstrans_head,entry)<0)
 	{
-	    eventlog(eventlog_level_error,"d2gstrans_load","could not append item");
+	    eventlog(eventlog_level_error,__FUNCTION__,"could not append item");
 	    netaddr_destroy(entry->exclude);
 	    addr_destroy(entry->output);
 	    addr_destroy(entry->server);
@@ -158,7 +158,7 @@ extern int d2gstrans_load(char const * filename)
 	}
     }
     fclose(fp);
-    eventlog(eventlog_level_info,"d2gstrans_load","d2gstrans file loaded");
+    eventlog(eventlog_level_info,__FUNCTION__,"d2gstrans file loaded");
     return 0;
 }
 
@@ -173,7 +173,7 @@ extern int d2gstrans_unload(void)
 	LIST_TRAVERSE(d2gstrans_head,curr)
 	{
 	    if (!(entry = elem_get_data(curr)))
-		eventlog(eventlog_level_error,"d2gstrans_unload","found NULL entry in list");
+		eventlog(eventlog_level_error,__FUNCTION__,"found NULL entry in list");
 	    else
 	    {
 		netaddr_destroy(entry->exclude);
@@ -206,7 +206,7 @@ extern void d2gstrans_net(unsigned int clientaddr, unsigned int *gsaddr)
     char           temp2[32];
     char           temp3[32];
     
-    eventlog(eventlog_level_debug,"d2gstrans_net","checking gameserver %s for client %s ...",
+    eventlog(eventlog_level_debug,__FUNCTION__,"checking gameserver %s for client %s ...",
 	     addr_num_to_ip_str(*gsaddr),	// gameserver ip
 	     addr_num_to_ip_str(clientaddr));	// client ip
 
@@ -216,21 +216,21 @@ extern void d2gstrans_net(unsigned int clientaddr, unsigned int *gsaddr)
 	{
 	    if (!(entry = elem_get_data(curr)))
 	    {
-		eventlog(eventlog_level_error,"d2gstrans_net","found NULL entry in list");
+		eventlog(eventlog_level_error,"__FUNCTION__","found NULL entry in list");
 		continue;
 	    }
-	    eventlog(eventlog_level_debug,"d2gstrans_net","against entry gameserver %s output %s clientex %s",
+	    eventlog(eventlog_level_debug,__FUNCTION__,"against entry gameserver %s output %s clientex %s",
 		     addr_get_addr_str(entry->server,temp1,sizeof(temp1)),	// gameserver
 		     addr_get_addr_str(entry->output,temp2,sizeof(temp2)),	// output
 		     netaddr_get_addr_str(entry->exclude,temp3,sizeof(temp3)));	// clientex
 	    if (addr_get_ip(entry->server)!=*gsaddr)
 	    {
-		eventlog(eventlog_level_debug,"d2gstrans_net","entry not for right gameserver");
+		eventlog(eventlog_level_debug,"__FUNCTION__","entry not for right gameserver");
 		continue;
 	    }
 	    if (netaddr_contains_addr_num(entry->exclude,clientaddr)==1)
 	    {
-		eventlog(eventlog_level_debug,"d2gstrans_net","client is in the excluded network");
+		eventlog(eventlog_level_debug,__FUNCTION__,"client is in the excluded network");
 		continue;
 	    }
 	    *gsaddr = addr_get_ip(entry->output);

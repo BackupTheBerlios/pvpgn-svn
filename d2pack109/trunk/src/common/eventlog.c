@@ -320,6 +320,7 @@ extern void eventlog(t_eventlog_level level, char const * module, char const * f
 #endif
     	va_end(args);
     	printf("\n");
+        fflush(stdout);
     }
     fflush(eventstrm);
 }

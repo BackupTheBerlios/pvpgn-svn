@@ -1,8 +1,6 @@
 /*
  * Copyright (C) 1998  Mark Baysinger (mbaysing@ucsd.edu)
  * Copyright (C) 1998,1999,2000  Ross Combs (rocombs@cs.nmsu.edu)
- * Some BITS modifications:
- *          Copyright (C) 1999  Marco Ziech (mmz@gmx.net)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

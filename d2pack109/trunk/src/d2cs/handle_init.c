@@ -58,7 +58,7 @@ extern int d2cs_handle_init_packet(t_connection * c, t_packet * packet)
 			retval=on_d2gs_initconn(c);
 			break;
 		default:
-			log_error("got bad connection class %d",class);
+			eventlog(eventlog_level_error,__FUNCTION__,"got bad connection class %d",class);
 			retval=-1;
 			break;
 	}
@@ -69,16 +69,16 @@ static int on_d2gs_initconn(t_connection * c)
 {
 	t_d2gs * gs;
 
-	log_info("[%d] client initiated d2gs connection",d2cs_conn_get_socket(c));
+	eventlog(eventlog_level_info,__FUNCTION__,"[%d] client initiated d2gs connection",d2cs_conn_get_socket(c));
 	if (!(gs=d2gslist_find_gs_by_ip(d2cs_conn_get_addr(c)))) {
 		// reload list and see if any dns addy's has changed
 		if (d2gslist_reload(prefs_get_d2gs_list())<0) {
-			log_error("error reloading game server list,exitting");
+			eventlog(eventlog_level_error,__FUNCTION__,"error reloading game server list,exitting");
 			return -1;
 		}
 		//recheck
 		if (!(gs=d2gslist_find_gs_by_ip(d2cs_conn_get_addr(c)))) {
-			log_error("d2gs connection from invalid ip address %s",addr_num_to_ip_str(d2cs_conn_get_addr(c)));
+			eventlog(eventlog_level_error,__FUNCTION__,"d2gs connection from invalid ip address %s",addr_num_to_ip_str(d2cs_conn_get_addr(c)));
 			return -1;
 		}
 	}
@@ -86,7 +86,7 @@ static int on_d2gs_initconn(t_connection * c)
 	d2cs_conn_set_state(c,conn_state_connected);
 	conn_set_d2gs_id(c,d2gs_get_id(gs));
 	if (handle_d2gs_init(c)<0) {
-		log_error("failed to init d2gs connection");
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to init d2gs connection");
 		return -1;
 	}
 	return 0;
@@ -94,7 +94,7 @@ static int on_d2gs_initconn(t_connection * c)
 
 static int on_d2cs_initconn(t_connection * c)
 {
-	log_info("[%d] client initiated d2cs connection",d2cs_conn_get_socket(c));
+	eventlog(eventlog_level_info,__FUNCTION__,"[%d] client initiated d2cs connection",d2cs_conn_get_socket(c));
 	d2cs_conn_set_class(c,conn_class_d2cs);
 	d2cs_conn_set_state(c,conn_state_connected);
 	return 0;

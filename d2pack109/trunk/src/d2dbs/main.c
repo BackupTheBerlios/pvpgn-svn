@@ -67,26 +67,27 @@ static int config_init(int argc, char * * argv);
 static int config_cleanup(void);
 static int setup_daemon(void);
 
+#ifdef DO_DAEMONIZE
 static int setup_daemon(void)
 {
 	int pid;
 	
 	if (chdir("/")<0) {
-		log_error("can not change working directory to root directory (chdir: %s)",strerror(errno));
+		eventlog(eventlog_level_error,__FUNCTION__,"can not change working directory to root directory (chdir: %s)",strerror(errno));
 		return -1;
 	}
-#ifndef WITH_D2
+
 	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	if (!d2dbs_cmdline_get_logstderr()) {
 		close(STDERR_FILENO);
 	}
-#endif
+
 	switch ((pid=fork())) {
 		case 0:
 			break;
 		case -1:
-			log_error("error create child process (fork: %s)",strerror(errno));
+			eventlog(eventlog_level_error,__FUNCTION__,"error create child process (fork: %s)",strerror(errno));
 			return -1;
 		default:
 			return pid;
@@ -95,6 +96,7 @@ static int setup_daemon(void)
 	setsid();
 	return 0;
 }
+#endif
 
 static int init(void)
 {
@@ -124,16 +126,15 @@ static int config_init(int argc, char * * argv)
 		d2dbs_cmdline_show_help();
 		return -1;
 	}
+#ifdef DO_DAEMONIZE
 	if (!d2dbs_cmdline_get_foreground()) {
 	    	if (!((pid = setup_daemon()) == 0)) {
 		        return pid;
 		}
 	}
-#ifdef WITH_D2
-	eventlog_set(stderr);
 #endif
 	if (d2dbs_prefs_load(d2dbs_cmdline_get_prefs_file())<0) {
-		log_error("error loading configuration file %s",d2dbs_cmdline_get_prefs_file());
+		eventlog(eventlog_level_error,__FUNCTION__,"error loading configuration file %s",d2dbs_cmdline_get_prefs_file());
 		return -1;
 	}
 	
@@ -142,7 +143,7 @@ static int config_init(int argc, char * * argv)
     {
         if (!(temp = strdup(levels)))
         {
-         eventlog(eventlog_level_fatal,"main","could not allocate memory for temp (exiting)");
+         eventlog(eventlog_level_fatal,__FUNCTION__,"could not allocate memory for temp (exiting)");
          return -1;
         }
 
@@ -151,7 +152,7 @@ static int config_init(int argc, char * * argv)
         while (tok)
         {
         if (eventlog_add_level(tok)<0)
-            eventlog(eventlog_level_error,"main","could not add log level \"%s\"",tok);
+            eventlog(eventlog_level_error,__FUNCTION__,"could not add log level \"%s\"",tok);
         tok = strtok(NULL,",");
         }
 
@@ -163,19 +164,19 @@ static int config_init(int argc, char * * argv)
 		eventlog_set(stderr);
 	} else if (d2dbs_cmdline_get_logfile()) {
 		if (eventlog_open(d2dbs_cmdline_get_logfile())<0) {
-			log_error("error open eventlog file %s",d2dbs_cmdline_get_logfile());
+			eventlog(eventlog_level_error,__FUNCTION__,"error open eventlog file %s",d2dbs_cmdline_get_logfile());
 			return -1;
 		}
 	} else {
 		if (eventlog_open(d2dbs_prefs_get_logfile())<0) {
-			log_error("error open eventlog file %s",d2dbs_prefs_get_logfile());
+			eventlog(eventlog_level_error,__FUNCTION__,"error open eventlog file %s",d2dbs_prefs_get_logfile());
 			return -1;
 		}
 	}
 #ifdef USE_CHECK_ALLOC
 	memlog_fp=fopen(cmdline_get_memlog_file(),"a");
 	if (!memlog_fp) {
-		log_warn("error open file %s for memory debug logging",cmdline_get_memlog_file());
+		eventlog(eventlog_level_warn,__FUNCTION__,"error open file %s for memory debug logging",cmdline_get_memlog_file());
 	} else {
 		check_set_file(memlog_fp);
 	}
@@ -192,7 +193,7 @@ static int config_cleanup(void)
 	return 0;
 }
 
-#ifdef WITH_D2
+#ifdef D2CLOSED
 extern int d2dbs_main(int argc, char * * argv)
 #else
 extern int main(int argc, char * * argv)
@@ -203,21 +204,21 @@ extern int main(int argc, char * * argv)
 #ifdef USE_CHECK_ALLOC
 	check_set_file(stderr);
 #endif
-#ifndef WITH_D2
 	eventlog_set(stderr);
-#endif
 	pid = config_init(argc, argv);
 	if (!(pid == 0)) {
 		return pid;
 	}
-	log_info(D2DBS_VERSION);
+	eventlog(eventlog_level_info,__FUNCTION__,D2DBS_VERSION);
 	if (init()<0) {
-		log_error("failed to init");
+		eventlog(eventlog_level_error,__FUNCTION__,"failed to init");
 		return -1;
 	} else {
-		log_info("server initialized");
+		eventlog(eventlog_level_info,__FUNCTION__,"server initialized");
 	}
+#ifndef WIN32 
 	d2dbs_handle_signal_init();
+#endif
 	dbs_server_main();
 	cleanup();
 	config_cleanup();

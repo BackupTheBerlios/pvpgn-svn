@@ -70,7 +70,7 @@ extern int gqlist_destroy(void)
 	END_LIST_TRAVERSE_DATA()
 
 	if (list_destroy(gqlist_head)<0) {
-		log_error("error destroy game queue list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error destroy game queue list");
 		return -1;
 	}
 	gqlist_head=NULL;
@@ -88,7 +88,7 @@ extern t_gq * gq_create(unsigned int clientid, t_packet * packet, char const * g
 	strncpy(gq->gamename, gamename, MAX_GAMENAME_LEN);
 	if (packet) packet_add_ref(packet);
 	if (list_append_data(gqlist_head,gq)<0) {
-		log_error("error add game queue to list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error add game queue to list");
 		packet_del_ref(packet);
 		free(gq);
 		return NULL;
@@ -100,7 +100,7 @@ extern int gq_destroy(t_gq * gq)
 {
 	ASSERT(gq,-1);
 	if (list_remove_data(gqlist_head,gq)<0) {
-		log_error("error remove game queue from list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error remove game queue from list");
 		return -1;
 	}
 	if (gq->packet) packet_del_ref(gq->packet);
@@ -123,15 +123,15 @@ extern int gqlist_check_creategame(void)
 	{
 		c=d2cs_connlist_find_connection_by_sessionnum(gq->clientid);
 		if (!c) {
-			log_error("client %d not found (gamename: %s)",gq->clientid,gq->gamename);
+			eventlog(eventlog_level_error,__FUNCTION__,"client %d not found (gamename: %s)",gq->clientid,gq->gamename);
 			gq_destroy(gq);
 			continue;
 		} else if (!conn_get_gamequeue(c)) {
-			log_error("got NULL game queue for client %s",d2cs_conn_get_account(c));
+			eventlog(eventlog_level_error,__FUNCTION__,"got NULL game queue for client %s",d2cs_conn_get_account(c));
 			gq_destroy(gq);
 			continue;
 		} else {
-			log_info("try create game %s for account %s",gq->gamename,d2cs_conn_get_account(c));
+			eventlog(eventlog_level_info,__FUNCTION__,"try create game %s for account %s",gq->gamename,d2cs_conn_get_account(c));
 			d2cs_handle_client_creategame(c,gq->packet);
 			conn_set_gamequeue(c,NULL);
 			gq_destroy(gq);
@@ -153,17 +153,17 @@ extern int gqlist_update_all_clients(void)
 	{
 		c=d2cs_connlist_find_connection_by_sessionnum(gq->clientid);
 		if (!c) {
-			log_error("client %d not found (gamename: %s)",gq->clientid,gq->gamename);
+			eventlog(eventlog_level_error,__FUNCTION__,"client %d not found (gamename: %s)",gq->clientid,gq->gamename);
 			gq_destroy(gq);
 			continue;
 		} else {
 			n++;
-			log_debug("update client %s position to %d",d2cs_conn_get_account(c),n);
+			eventlog(eventlog_level_debug,__FUNCTION__,"update client %s position to %d",d2cs_conn_get_account(c),n);
 			d2cs_send_client_creategamewait(c,n);
 		}
 	}
 	END_LIST_TRAVERSE_DATA()
-	if (n) log_info("total %d game queues",n);
+	if (n) eventlog(eventlog_level_info,__FUNCTION__,"total %d game queues",n);
 	return 0;
 }
 

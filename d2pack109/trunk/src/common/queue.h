@@ -31,8 +31,9 @@
 typedef struct queue
 #ifdef QUEUE_INTERNAL_ACCESS
 {
-  struct queue * next;
-  t_packet *     packet;
+    unsigned ulen, alen;
+    t_packet ** ring;
+    unsigned head, tail;
 }
 #endif
 t_queue;

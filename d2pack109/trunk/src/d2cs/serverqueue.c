@@ -68,7 +68,7 @@ extern int sqlist_destroy(void)
 	END_LIST_TRAVERSE_DATA_CONST()
 
 	if (list_destroy(sqlist_head)<0) {
-		log_error("error destroy server queue list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error destroy server queue list");
 		return -1;
 	}
 	sqlist_head=NULL;
@@ -84,7 +84,7 @@ extern int sqlist_check_timeout(void)
 	BEGIN_LIST_TRAVERSE_DATA(sqlist_head, sq)
 	{
 		if (now - sq->ctime > prefs_get_sq_timeout()) {
-			log_info("destroying expired server queue %d",sq->seqno);
+			eventlog(eventlog_level_info,__FUNCTION__,"destroying expired server queue %d",sq->seqno);
 			sq_destroy(sq);
 		}
 	}
@@ -117,7 +117,7 @@ extern t_sq * sq_create(unsigned int clientid, t_packet * packet,unsigned int ga
 	sq->gametoken=0;
 	if (packet) packet_add_ref(packet);
 	if (list_append_data(sqlist_head,sq)<0) {
-		log_error("error append server queue to list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error append server queue to list");
 		if (packet) packet_del_ref(packet);
 		free(sq);
 		return NULL;
@@ -129,7 +129,7 @@ extern int sq_destroy(t_sq * sq)
 {
 	ASSERT(sq,-1);
 	if (list_remove_data(sqlist_head,sq)<0) {
-		log_error("error remove server queue from list");
+		eventlog(eventlog_level_error,__FUNCTION__,"error remove server queue from list");
 		return -1;
 	}
 	if (sq->packet) packet_del_ref(sq->packet);

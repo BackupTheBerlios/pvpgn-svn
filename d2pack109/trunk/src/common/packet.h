@@ -1,9 +1,6 @@
 /*
-
  * Copyright (C) 1998  Mark Baysinger (mbaysng@ucsd.edu)
  * Copyright (C) 1998,1999,2000  Ross Combs (rocombs@cs.nmsu.edu)
- * Some BITS modifications:
- *          Copyright (C) 1999,2000,2001  Marco Ziech (mmz@gmx.net)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,7 +26,6 @@
 # include "common/anongame_protocol.h"
 # include "common/file_protocol.h"
 # include "common/bot_protocol.h"
-# include "common/bits_protocol.h"
 # include "common/udp_protocol.h"
 # include "common/d2game_protocol.h"
 # include "d2cs/d2cs_protocol.h"
@@ -45,7 +41,6 @@
 # include "common/anongame_protocol.h"
 # include "common/file_protocol.h"
 # include "common/bot_protocol.h"
-# include "common/bits_protocol.h"
 # include "common/udp_protocol.h"
 # include "common/d2game_protocol.h"
 # include "d2cs/d2cs_protocol.h"
@@ -63,14 +58,13 @@ typedef enum
     packet_class_bnet,
     packet_class_file,
     packet_class_raw,
-    packet_class_bits,
     packet_class_udp,
     packet_class_d2game,
     packet_class_d2gs,
     packet_class_d2cs,
     packet_class_d2cs_bnetd,
     packet_class_auth,
-	packet_class_w3route
+    packet_class_w3route
 } t_packet_class;
 
 
@@ -99,7 +93,6 @@ typedef struct
         
         t_bnet_generic   bnet;
         t_file_generic   file;
-	t_bits_generic   bits;
         t_udp_generic    udp;
         t_d2game_generic d2game;
 	t_auth_generic   auth;
@@ -209,58 +202,6 @@ typedef struct
 	t_client_udpping           client_udpping;
 	t_client_sessionaddr1      client_sessionaddr1;
 	t_client_sessionaddr2      client_sessionaddr2;
-	
-	t_bits_session_request     bits_session_request;
-	t_bits_session_reply       bits_session_reply;
-       	t_bits_auth_request        bits_auth_request;
-	t_bits_auth_reply          bits_auth_reply;
-	t_bits_master_auth_request bits_master_auth_request;
-	t_bits_master_auth_reply   bits_master_auth_reply;
-        
-	t_bits_va_create_req         bits_va_create_req;
-	t_bits_va_create_reply       bits_va_create_reply;
-	t_bits_va_set_attr           bits_va_set_attr;
-	t_bits_va_get_attr           bits_va_get_attr;
-	t_bits_va_attr               bits_va_attr;
-	t_bits_va_get_allattr        bits_va_get_allattr;
-	t_bits_va_allattr            bits_va_allattr;
-	t_bits_va_lock               bits_va_lock;
-	t_bits_va_lock_ack           bits_va_lock_ack;
-	t_bits_va_unlock             bits_va_unlock;
-	t_bits_va_loginreq           bits_va_loginreq;
-	t_bits_va_loginreply         bits_va_loginreply;
-	t_bits_va_logout             bits_va_logout;
-	t_bits_va_login              bits_va_login;
-	t_bits_va_update_playerinfo  bits_va_update_playerinfo;
-        
-	t_bits_net_discover        bits_net_discover;
-	t_bits_net_undiscover      bits_net_undiscover;
-	t_bits_net_ping            bits_net_ping;
-	t_bits_net_pong            bits_net_pong;
-	t_bits_net_motd            bits_net_motd;
-        
-        t_bits_chat_user                      bits_chat_user;
-        t_bits_chat_channellist_add           bits_chat_channellist_add;
-        t_bits_chat_channellist_del           bits_chat_channellist_del;
-        t_bits_chat_channel_join_request      bits_chat_channel_join_request;
-        t_bits_chat_channel_join_new_request  bits_chat_channel_join_new_request;
-        t_bits_chat_channel_join_perm_request bits_chat_channel_join_perm_request;
-        t_bits_chat_channel_join_reply        bits_chat_channel_join_reply;
-        t_bits_chat_channel_leave             bits_chat_channel_leave;
-        t_bits_chat_channel_join              bits_chat_channel_join;
-        t_bits_chat_channel_server_join       bits_chat_channel_server_join;
-        t_bits_chat_channel_server_leave      bits_chat_channel_server_leave;
-        t_bits_chat_channel                   bits_chat_channel;
-
-	t_bits_gamelist_add        bits_gamelist_add;
-	t_bits_gamelist_del        bits_gamelist_del;
-	t_bits_game_update         bits_game_update;
-	t_bits_game_join_request   bits_game_join_request;
-	t_bits_game_join_reply     bits_game_join_reply;
-	t_bits_game_leave          bits_game_leave;
-	t_bits_game_create_request bits_game_create_request;
-	t_bits_game_create_reply   bits_game_create_reply;
-	t_bits_game_report	   bits_game_report;
 	
 	t_client_authloginreq      client_authloginreq;
 	t_server_authloginreply    server_authloginreply;
@@ -446,10 +387,6 @@ typedef struct
 } t_packet;
 
 #endif
-
-/* has the packet been mapped yet? */
-#define PACKET_FLAG_PMAPPED 0x0002
-
 
 /*****/
 #ifndef JUST_NEED_TYPES

@@ -92,10 +92,10 @@ extern int d2dbs_handle_signal(void)
 	if (signal_data.cancel_quit) {
 		signal_data.cancel_quit=0;
 		if (!signal_data.exit_time) {
-			log_info("there is no previous shutdown to be canceled");
+			eventlog(eventlog_level_info,__FUNCTION__,"there is no previous shutdown to be canceled");
 		} else {
 			signal_data.exit_time=0;
-			log_info("shutdown was canceled due to signal");
+			eventlog(eventlog_level_info,__FUNCTION__,"shutdown was canceled due to signal");
 		}
 	}
 	if (signal_data.do_quit) {
@@ -107,16 +107,16 @@ extern int d2dbs_handle_signal(void)
 			signal_data.exit_time-=d2dbs_prefs_get_shutdown_decr();
 		}
 		if (now >= (signed)signal_data.exit_time) {
-			log_info("shutdown server due to signal");
+			eventlog(eventlog_level_info,__FUNCTION__,"shutdown server due to signal");
 			return -1;
 		}
-		log_info("the server is going to shutdown in %lu minutes",(signal_data.exit_time-now)/60);
+		eventlog(eventlog_level_info,__FUNCTION__,"the server is going to shutdown in %lu minutes",(signal_data.exit_time-now)/60);
 	}
 	if (signal_data.reload_config) {
 		signal_data.reload_config=0;
-		log_info("reloading configuartion file due to signal");
+		eventlog(eventlog_level_info,__FUNCTION__,"reloading configuartion file due to signal");
 		if (d2dbs_prefs_reload(d2dbs_cmdline_get_prefs_file())<0) {
-			log_error("error reload configuration file,exitting");
+			eventlog(eventlog_level_error,__FUNCTION__,"error reload configuration file,exitting");
 			return -1;
 		}
         eventlog_clear_level();
@@ -124,7 +124,7 @@ extern int d2dbs_handle_signal(void)
         {
           if (!(temp = strdup(levels)))
           {
-           eventlog(eventlog_level_fatal,"handle_signal","could not allocate memory for temp (exiting)");
+           eventlog(eventlog_level_fatal,__FUNCTION__,"could not allocate memory for temp (exiting)");
          return -1;
           }
 
@@ -133,7 +133,7 @@ extern int d2dbs_handle_signal(void)
           while (tok)
           {
           if (eventlog_add_level(tok)<0)
-              eventlog(eventlog_level_error,"handle_signal","could not add log level \"%s\"",tok);
+              eventlog(eventlog_level_error,__FUNCTION__,"could not add log level \"%s\"",tok);
           tok = strtok(NULL,",");
           }
           free(temp);
@@ -143,7 +143,7 @@ extern int d2dbs_handle_signal(void)
 	}
 	if (signal_data.save_ladder) {
 		signal_data.save_ladder=0;
-		log_info("save ladder data due to signal");
+		eventlog(eventlog_level_info,__FUNCTION__,"save ladder data due to signal");
 		d2ladder_saveladder();
 	}
 	return 0;
@@ -164,27 +164,27 @@ static void on_signal(int s)
 {
 	switch (s) {
 		case SIGINT:
-			log_debug("sigint received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigint received");
 			signal_data.do_quit=1;
 			break;
 		case SIGTERM:
-			log_debug("sigint received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigint received");
 			signal_data.do_quit=1;
 			break;
 		case SIGABRT:
-			log_debug("sigabrt received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigabrt received");
 			signal_data.cancel_quit=1;
 			break;
 		case SIGHUP:
-			log_debug("sighup received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sighup received");
 			signal_data.reload_config=1;
 			break;
 		case SIGUSR1:
-			log_debug("sigusr1 received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigusr1 received");
 			signal_data.save_ladder=1;
 			break;
 		case SIGPIPE:
-			log_debug("sigpipe received");
+			eventlog(eventlog_level_debug,__FUNCTION__,"sigpipe received");
 			break;
 	}
 	signal(s,on_signal);
