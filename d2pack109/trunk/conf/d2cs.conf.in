@@ -84,7 +84,7 @@ charsavedir		=	/usr/local/var/charsave
 charinfodir		=	/usr/local/var/charinfo
 ladderdir		=	/usr/local/var/ladders
 newbiefile		=	/usr/local/var/files/newbie.save
-d2gstransfile		=	/usr/local/etc/d2gstrans.conf
+transfile               =       /usr/local/etc/address_translation.conf
 #										#
 #################################################################################
 

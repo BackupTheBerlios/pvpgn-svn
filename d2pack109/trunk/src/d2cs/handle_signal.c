@@ -68,7 +68,7 @@
 #include "d2ladder.h"
 #include "cmdline_parse.h"
 #include "handle_signal.h"
-#include "d2gstrans.h"
+#include "common/trans.h"
 #include "common/eventlog.h"
 #include "common/setup_after.h"
 
@@ -126,8 +126,8 @@ extern int handle_signal(void)
 			eventlog(eventlog_level_error,__FUNCTION__,"error reloading game server list,exitting");
 			return -1;
 		}
-		if (d2gstrans_reload(prefs_get_d2gstrans_file())<0) {
-			eventlog(eventlog_level_error,__FUNCTION__,"error reloading d2gstrans list,exitting");
+		if (trans_reload(d2cs_prefs_get_transfile(),TRANS_D2CS)<0) {
+			eventlog(eventlog_level_error,__FUNCTION__,"error reloading trans list,exitting");
 			return -1;
 		}
 

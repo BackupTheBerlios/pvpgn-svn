@@ -138,6 +138,7 @@ extern int d2gslist_destroy(void)
 		d2gs_destroy(gs);
 	}
 	END_LIST_TRAVERSE_DATA_CONST()
+	d2cs_connlist_reap();
 
 	if (list_destroy(d2gslist_head)<0) {
 		eventlog(eventlog_level_error,__FUNCTION__,"error destroy d2gs list");

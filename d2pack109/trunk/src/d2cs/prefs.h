@@ -32,7 +32,7 @@ typedef struct
 	char const	* motd;
 	char const	* realmname;
 	char const	* d2gs_password;
-	char const	* d2gstransfile;
+	char const	* transfile;
 	char const      * account_allowed_symbols;
 	unsigned int	ladder_refresh_interval;
 	unsigned int	maxchar;
@@ -68,7 +68,7 @@ extern int d2cs_prefs_load(char const * filename);
 extern int prefs_reload(char const * filename);
 extern int d2cs_prefs_unload(void);
 
-extern char const * prefs_get_d2gstrans_file(void);
+extern char const * d2cs_prefs_get_transfile(void);
 extern char const * d2cs_prefs_get_logfile(void);
 extern char const * prefs_get_servaddrs(void);
 extern char const * prefs_get_charsave_dir(void);

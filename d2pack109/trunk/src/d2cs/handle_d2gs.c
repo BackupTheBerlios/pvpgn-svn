@@ -48,7 +48,7 @@
 #include "connection.h"
 #include "prefs.h"
 #include "d2cs_d2gs_protocol.h"
-#include "d2gstrans.h"
+#include "common/trans.h"
 #include "common/addr.h"
 #include "common/eventlog.h"
 #include "common/queue.h"
@@ -272,6 +272,7 @@ static int on_d2gs_joingamereply(t_connection * c, t_packet * packet)
 	int		reply;
 	int		seqno;
 	unsigned int	gsaddr;
+	unsigned short	gsport;
 			
 
 	seqno=bn_int_get(packet->u.d2cs_d2gs.h.seqno);
@@ -323,7 +324,8 @@ static int on_d2gs_joingamereply(t_connection * c, t_packet * packet)
 			bn_int_set(&rpacket->u.d2cs_client_joingamereply.token,sq_get_gametoken(sq));
 
 			gsaddr = d2gs_get_ip(gs);
-			d2gstrans_net(d2cs_conn_get_addr(client),&gsaddr);
+			gsport = 4000;
+			trans_net(d2cs_conn_get_addr(client), &gsaddr, &gsport);
 			
 			if(d2gs_get_ip(gs)!=gsaddr)
 			{

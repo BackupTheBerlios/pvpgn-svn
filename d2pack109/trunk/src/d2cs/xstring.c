@@ -249,6 +249,7 @@ extern char * * strtoargv(char const * str, unsigned int * count)
 	memcpy(result,ptrindex,index_size);
 	free(temp);
 	free(pindex);
+	free(ptrindex);
 	return (char * *)result;
 }
 

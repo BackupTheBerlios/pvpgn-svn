@@ -93,7 +93,6 @@ ${SRC_D2CSDIR}/s2s.o \
 ${SRC_D2CSDIR}/net.o \
 ${SRC_D2CSDIR}/d2ladder.o \
 ${SRC_D2CSDIR}/handle_signal.o \
-${SRC_D2CSDIR}/d2gstrans.o \
 ${SRC_COMMONDIR}/check_alloc.o \
 ${SRC_COMMONDIR}/hashtable.o \
 ${SRC_COMMONDIR}/hexdump.o \
@@ -111,6 +110,7 @@ ${SRC_COMMONDIR}/fdwatch_poll.o \
 ${SRC_COMMONDIR}/fdwatch_epoll.o \
 ${SRC_COMMONDIR}/fdwatch_kqueue.o \
 ${SRC_COMMONDIR}/rlimit.o \
+${SRC_COMMONDIR}/trans.o \
 ${SRC_COMPATDIR}/inet_aton.o \
 ${SRC_COMPATDIR}/inet_ntoa.o \
 ${SRC_COMPATDIR}/strdup.o \
@@ -160,7 +160,7 @@ ${SRC_COMPATDIR}/strsep.o
 OBJECTS		= ${d2cs_OBJECTS} ${d2dbs_OBJECTS}
 SBINS           = ${d2cs_SBIN} ${d2dbs_SBIN}
 
-CONFS		= d2cs.conf d2dbs.conf d2gstrans.conf
+CONFS		= d2cs.conf d2dbs.conf address_translation.conf
 
 SHARES		= newbie.save
 
@@ -242,7 +242,7 @@ install-sbin: ${SBINS}
 	done
 
 .PHONY: install-conf
-install-conf: 
+install-conf: ${SRC_CONFDIR}/d2cs.conf ${SRC_CONFDIR}/d2dbs.conf
 	${INSTALL_DIRS} ${DESTDIR}/${confdir}
 	@list='${CONFS}'; for p in $$list; do \
 	  if test -f ${SRC_CONFDIR}/$$p; then \

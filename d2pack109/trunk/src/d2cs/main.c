@@ -58,7 +58,7 @@
 #include "cmdline_parse.h"
 #include "d2ladder.h"
 #include "version.h"
-#include "d2gstrans.h"
+#include "common/trans.h"
 #include "common/fdwatch.h"
 #include "common/eventlog.h"
 #include "common/setup_after.h"
@@ -111,8 +111,8 @@ static int init(void)
 	d2gslist_create();
 	gqlist_create();
 	d2ladder_init();
-	if(d2gstrans_load(prefs_get_d2gstrans_file())<0)
-	    eventlog(eventlog_level_error,__FUNCTION__,"could not load d2gstrans list");
+	if(trans_load(d2cs_prefs_get_transfile(),TRANS_D2CS)<0)
+	    eventlog(eventlog_level_error,__FUNCTION__,"could not load trans list");
 	fdwatch_init();
 	return 0;
 }
@@ -126,7 +126,7 @@ static int cleanup(void)
 	sqlist_destroy();
 	d2gslist_destroy();
 	gqlist_destroy();
-	d2gstrans_unload();
+	trans_unload();
 	fdwatch_close();
 	return 0;
 }

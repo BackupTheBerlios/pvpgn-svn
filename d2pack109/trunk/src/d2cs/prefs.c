@@ -53,7 +53,7 @@ static t_conf_table prefs_conf_table[]={
     { "ladderdir",              offsetof(t_prefs,ladderdir),         conf_type_str,    0,	D2CS_LADDER_DIR         },
     { "ladder_refresh_interval",offsetof(t_prefs,ladder_refresh_interval),conf_type_int,3600,	NULL                    },
     { "newbiefile",             offsetof(t_prefs,newbiefile),        conf_type_str,    0,	D2CS_CHARSAVE_NEWBIE    },
-    { "d2gstransfile",		offsetof(t_prefs,d2gstransfile),     conf_type_str,    0,	D2CS_D2GSTRANS_FILE	},
+    { "transfile",		offsetof(t_prefs,transfile),         conf_type_str,    0,	D2CS_TRANS_FILE		},
     { "motd",                   offsetof(t_prefs,motd),              conf_type_hexstr, 0,	D2CS_MOTD               },
     { "realmname",              offsetof(t_prefs,realmname),         conf_type_str,    0,	DEFAULT_REALM_NAME      },
     { "maxchar",                offsetof(t_prefs,maxchar),           conf_type_int,    MAX_CHAR_PER_ACCT,	NULL            },
@@ -301,9 +301,9 @@ extern unsigned int prefs_get_allow_convert(void)
 	return prefs_conf.allow_convert;
 }
 
-extern char const * prefs_get_d2gstrans_file(void)
+extern char const * d2cs_prefs_get_transfile(void)
 {
-	return prefs_conf.d2gstransfile;
+	return prefs_conf.transfile;
 }
 
 extern char const * prefs_get_d2cs_account_allowed_symbols(void)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002
+ * Copyright (C) 2004  CreepLord (creeplord@pvpgn.org)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,10 +15,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-#ifndef INCLUDED_D2GSTRANS_TYPES
-#define INCLUDED_D2GSTRANS_TYPES
+#ifndef INCLUDED_TRANS_TYPES
+#define INCLUDED_TRANS_TYPES
 
-#ifdef D2GSTRANS_INTERNAL_ACCESS
+#ifdef TRANS_INTERNAL_ACCESS
 
 #ifdef JUST_NEED_TYPES
 # include "common/addr.h"
@@ -30,23 +30,26 @@
 
 typedef struct
 {
-    t_addr *    server;
-    t_addr *    output;
-    t_netaddr * exclude;
-} t_d2gstrans;
+    t_addr	*input;
+    t_addr	*output;
+    t_netaddr	*network;
+} t_trans;
 
 #endif
 
 #endif
 
 #ifndef JUST_NEED_TYPES
-#ifndef INCLUDED_D2GSTRANS_PROTOS
-#define INCLUDED_D2GSTRANS_PROTOS
+#ifndef INCLUDED_TRANS_PROTOS
+#define INCLUDED_TRANS_PROTOS
 
-extern int d2gstrans_load(char const * filename);
-extern int d2gstrans_unload(void);
-extern int d2gstrans_reload(char const * filename);
-extern void d2gstrans_net(unsigned int clientaddr, unsigned int *gsaddr);
+#define TRANS_BNETD 1
+#define TRANS_D2CS  2
+
+extern int trans_load(char const * filename, int program);
+extern int trans_unload(void);
+extern int trans_reload(char const * filename, int program);
+extern int trans_net(unsigned int clientaddr, unsigned int *addr, unsigned short *port);
 
 #endif
 #endif
