@@ -45,27 +45,23 @@
 #include "common/setup_after.h"
 
 static t_conf_table param_conf_table[]={
-#ifdef USE_CHECK_ALLOC
-	{ "-m",			offsetof(t_param,memlog_file),	conf_type_str,  (int)DEFAULT_MEMLOG_FILE},
-#endif
-	{ "-c",			offsetof(t_param,prefs_file),	conf_type_str,	(int)D2CS_DEFAULT_CONF_FILE  },
-	{ "-l",			offsetof(t_param,logfile),	conf_type_str,  (int)NULL		},
-	{ "-h",			offsetof(t_param,help),		conf_type_bool, 0			},
-	{ "--help",		offsetof(t_param,help),		conf_type_bool,	0			},
-	{ "-v",			offsetof(t_param,version),	conf_type_bool,	0			},
-	{ "--version",		offsetof(t_param,version),	conf_type_bool,	0			},
-	{ "-f",			offsetof(t_param,foreground),	conf_type_bool,	0			},
-	{ "--foreground",	offsetof(t_param,foreground),	conf_type_bool,	0			},
-	{ "-s",			offsetof(t_param,logstderr),	conf_type_bool,	0			},
-	{ "--stderr",		offsetof(t_param,logstderr),	conf_type_bool,	0			},
-	{ NULL,			0,				conf_type_none,	0			}
+	{ "-c",			offsetof(t_param,prefs_file),	conf_type_str,	0,	D2CS_DEFAULT_CONF_FILE  },
+	{ "-l",			offsetof(t_param,logfile),	conf_type_str,  0,	NULL		},
+	{ "-h",			offsetof(t_param,help),		conf_type_bool, 0,	NULL		},
+	{ "--help",		offsetof(t_param,help),		conf_type_bool,	0,	NULL		},
+	{ "-v",			offsetof(t_param,version),	conf_type_bool,	0,	NULL		},
+	{ "--version",		offsetof(t_param,version),	conf_type_bool,	0,	NULL		},
+	{ "-f",			offsetof(t_param,foreground),	conf_type_bool,	0,	NULL		},
+	{ "--foreground",	offsetof(t_param,foreground),	conf_type_bool,	0,	NULL		},
+	{ "-s",			offsetof(t_param,logstderr),	conf_type_bool,	0,	NULL		},
+	{ "--stderr",		offsetof(t_param,logstderr),	conf_type_bool,	0,	NULL		},
+	{ NULL,			0,				conf_type_none,	0,	NULL		}
 };
 
 static t_param cmdline_param;
 
 static char help_message[]="\n"
 "Usage: d2cs [<options>]\n"
-"	-m <FILE>:		set memory debug logging file to FILE\n"
 "	-c <FILE>:		set configuration file to FILE\n"
 "	-l <FILE>:		set log to FILE\n"
 "	-h, --help:		show this help message and exit\n"
@@ -74,8 +70,7 @@ static char help_message[]="\n"
 "	-s, --stderr:		log to stderr instead of logging to file\n"
 "\n"
 "Notes:\n"
-"	1.You should always use absolute path here for all FILE names\n"
-"	2.-m option only works when compiled with USE_CHECK_ALLOC defined\n";
+"	1.You should always use absolute path here for all FILE names\n";
 
 extern void cmdline_show_help(void)
 {

@@ -96,6 +96,7 @@
 
 #ifdef WIN32
 # include <io.h>
+# define F_OK 0
 #endif
 
 #include "dbserver.h"

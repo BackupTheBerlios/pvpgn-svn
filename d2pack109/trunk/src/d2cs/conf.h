@@ -32,7 +32,8 @@ typedef struct
 	char const	* name;
 	int		offset;
 	e_conf_type	type;
-	int		def_value;
+	int		def_intval;
+	char const	* def_strval;
 } t_conf_table;
 
 extern int conf_cleanup(t_conf_table * conf_table, void * param_data, int size);

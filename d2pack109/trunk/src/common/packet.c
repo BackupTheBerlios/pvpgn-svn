@@ -391,6 +391,32 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "CLIENT_LADDERSEARCHREQ";
 	    case CLIENT_CDKEY:
 		return "CLIENT_CDKEY";
+	    case CLIENT_CDKEY2:
+		return "CLIENT_CDKEY2";
+	    case CLIENT_CDKEY3:
+		return "CLIENT_CDKEY3";		
+	    case CLIENT_REALMLISTREQ:
+		return "CLIENT_REALMLISTREQ";
+	    case CLIENT_REALMJOINREQ:
+		return "CLIENT_REALMJOINREQ";
+	    case CLIENT_UNKNOWN_37:
+		return "CLIENT_UNKNOWN_37";
+	    case CLIENT_UNKNOWN_39:
+		return "CLIENT_UNKNOWN_39";
+	    case CLIENT_LOGINREQ2:
+		return "CLIENT_LOGINREQ2";
+	    case CLIENT_MOTD_W3:
+		return "CLIENT_MOTD_W3";
+	    case CLIENT_LOGINREQ_W3:
+                return "CLIENT_LOGINREQ_W3"; 
+	    case CLIENT_LOGONPROOFREQ:
+                return "CLIENT_LOGONPROOFREQ";
+	    case CLIENT_CREATEACCOUNT_W3:
+		return "CLIENT_CREATEACCOUNT_W3";
+	    case CLIENT_CHANGEGAMEPORT:
+                return "CLIENT_CHANGEGAMEPORT"; 
+            case CLIENT_CREATEACCTREQ2:
+		return "CLIENT_CREATEACCTREQ2";
 	    case CLIENT_UDPOK:
 		return "CLIENT_UDPOK";
 	    case CLIENT_FILEINFOREQ:
@@ -399,8 +425,6 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "CLIENT_STATSREQ";
 	    case CLIENT_LOGINREQ1:
 		return "CLIENT_LOGINREQ1";
-	    case CLIENT_CDKEY2:
-		return "CLIENT_CDKEY2";
 	    case CLIENT_CHANGEPASSREQ:
 		return "CLIENT_CHANGEPASSREQ";
 	    case CLIENT_PLAYERINFOREQ:
@@ -423,6 +447,8 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "CLIENT_STARTGAME4";
 	    case CLIENT_CLOSEGAME:
 		return "CLIENT_CLOSEGAME";
+	    case CLIENT_CLOSEGAME2:
+		return "CLIENT_CLOSEGAME2";
 	    case CLIENT_LEAVECHANNEL:
 		return "CLIENT_LEAVECHANNEL";
 	    case CLIENT_MAPAUTHREQ1:
@@ -437,6 +463,10 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "CLIENT_ADCLICK";
 	    case CLIENT_ADCLICK2:
 		return "CLIENT_ADCLICK2";
+	    case CLIENT_UNKNOWN_17:
+		return "CLIENT_UNKNOWN_17";
+	    case CLIENT_UNKNOWN_24:
+		return "CLIENT_UNKNOWN_24";
 	    case CLIENT_LADDERREQ:
 		return "CLIENT_LADDERREQ";
 	    case CLIENT_ECHOREPLY:
@@ -449,32 +479,26 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "CLIENT_JOIN_GAME";
 	    case CLIENT_STATSUPDATE:
 		return "CLIENT_STATSUPDATE";
-	    case CLIENT_REALMLISTREQ:
-		return "CLIENT_REALMLISTREQ";
-	    case CLIENT_REALMJOINREQ:
-		return "CLIENT_REALMJOINREQ";
 	    case CLIENT_REALMJOINREQ_109:
 		return "CLIENT_REALMJOINREQ_109";
-	    case CLIENT_UNKNOWN_37:
-		return "CLIENT_UNKNOWN_37";
-	    case CLIENT_UNKNOWN_39:
-		return "CLIENT_UNKNOWN_39";
-	    case CLIENT_LOGINREQ2:
-		return "CLIENT_LOGINREQ2";
-	    case CLIENT_LOGINREQ_W3:
-                return "CLIENT_LOGINREQ_W3"; 
-	    case CLIENT_LOGONPROOFREQ:
-                return "CLIENT_LOGONPROOFREQ"; 
-	    case CLIENT_CHANGEGAMEPORT:
-                return "CLIENT_CHANGEGAMEPORT"; 
-	    case CLIENT_CREATEACCOUNT_W3:
-		return "CLIENT_CREATEACCOUNT_W3";
-            case CLIENT_CREATEACCTREQ2:
-		return "CLIENT_CREATEACCTREQ2";
+	    case CLIENT_CHANGECLIENT:
+		return "CLIENT_CHANGECLIENT";
+	    case CLIENT_SETEMAILREPLY:
+		return "CLIENT_SETEMAILREPLY";
+	    case CLIENT_GETPASSWORDREQ:
+		return "CLIENT_GETPASSWORDREQ";
+	    case CLIENT_CHANGEEMAILREQ:
+		return "CLIENT_CHANGEEMAILREQ";
+	    case CLIENT_CRASHDUMP:
+		return "CLIENT_CRASHDUMP";
 	    case CLIENT_FINDANONGAME:
 		return "CLIENT_FINDANONGAME";
-	    case CLIENT_CDKEY3:
-		return "CLIENT_CDKEY3";
+	    case CLIENT_ARRANGEDTEAM_FRIENDSCREEN:
+		return "CLIENT_ARRANGEDTEAM_FRIENDSCREEN";
+	    case CLIENT_ARRANGEDTEAM_INVITE_FRIEND:
+		return "CLIENT_ARRANGEDTEAM_INVITE_FRIEND";		
+	    case CLIENT_ARRANGEDTEAM_ACCEPT_DECLINE_INVITE:
+		return "CLIENT_ARRANGEDTEAM_ACCEPT_DECLINE_INVITE";		
 	    case CLIENT_FRIENDSLISTREQ:
 		return "CLIENT_FRIENDSLISTREQ";
 	    case CLIENT_FRIENDINFOREQ:
@@ -575,7 +599,29 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 	    return "unknown";
 
 	case packet_class_w3route:
+	    if (packet_get_size(packet)<sizeof(t_w3route_header))
+	    {
+		eventlog(eventlog_level_error,"packet_get_type_str","packet is shorter than header (len=%u)",packet_get_size(packet));
 		return "unknown";
+	    }
+	    switch (bn_short_get(packet->u.bnet.h.type))
+	    {
+	    case CLIENT_W3ROUTE_REQ:
+	        return "CLIENT_W3ROUTE_REQ";
+	    case CLIENT_W3ROUTE_LOADINGDONE:
+	        return "CLIENT_W3ROUTE_LOADINGDONE";	        
+	    case CLIENT_W3ROUTE_ABORT:
+	        return "CLIENT_W3ROUTE_ABORT";
+	    case CLIENT_W3ROUTE_CONNECTED:
+	        return "CLIENT_W3ROUTE_CONNECTED";
+	    case CLIENT_W3ROUTE_ECHOREPLY:
+	        return "CLIENT_W3ROUTE_ECHOREPLY";
+	    case CLIENT_W3ROUTE_GAMERESULT:
+	        return "CLIENT_W3ROUTE_GAMERESULT";	        
+	    case CLIENT_W3ROUTE_GAMERESULT_W3XP:
+	        return "CLIENT_W3ROUTE_GAMERESULT_W3XP";
+	    }
+	    return "unknown";
 	
 	case packet_class_none:
 	    return "unknown";
@@ -621,6 +667,28 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "SERVER_LADDERSEARCHREPLY";
 	    case SERVER_CDKEYREPLY:
 		return "SERVER_CDKEYREPLY";
+	    case SERVER_CDKEYREPLY2:
+		return "SERVER_CDKEYREPLY2";
+	    case SERVER_CDKEYREPLY3:
+		return "SERVER_CDKEYREPLY3";
+	    case SERVER_REALMLISTREPLY:
+		return "SERVER_REALMLISTREPLY";
+	    case SERVER_REALMJOINREPLY:
+		return "SERVER_REALMJOINREPLY";
+	    case SERVER_UNKNOWN_37:
+		return "SERVER_UNKNOWN_37";
+	    case SERVER_MOTD_W3:
+		return "SERVER_MOTD_W3";
+	    case SERVER_LOGINREPLY_W3:
+		return "SERVER_LOGINREPLY_W3";
+	    case SERVER_LOGONPROOFREPLY:
+		return "SERVER_LOGONPROOFREPLY";				
+	    case SERVER_CREATEACCOUNT_W3:
+		return "SERVER_CREATEACCTREPLY2";
+	    case SERVER_LOGINREPLY2:
+		return "SERVER_LOGINREPLY2";
+	    case SERVER_CREATEACCTREPLY2:
+		return "SERVER_CREATEACCOUNT_W3";		
 	    case SERVER_FILEINFOREPLY:
 		return "SERVER_FILEINFOREPLY";
 	    case SERVER_STATSREPLY:
@@ -629,8 +697,6 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "SERVER_LOGINREPLY1";
 	    case SERVER_CHANGEPASSACK:
 		return "SERVER_CHANGEPASSACK";
-	    case SERVER_CDKEYREPLY2:
-		return "SERVER_CDKEYREPLY2";
 	    case SERVER_PLAYERINFOREPLY:
 		return "SERVER_PLAYERINFOREPLY";
 	    case SERVER_CHANNELLIST:
@@ -661,28 +727,30 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 		return "SERVER_ECHOREQ";
 	    case SERVER_PINGREPLY:
 		return "SERVER_PINGREPLY";
-	    case SERVER_REALMLISTREPLY:
-		return "SERVER_REALMLISTREPLY";
-	    case SERVER_REALMJOINREPLY:
-		return "SERVER_REALMJOINREPLY";
 	    case SERVER_REALMJOINREPLY_109:
 		return "SERVER_REALMJOINREPLY_109";
-	    case SERVER_UNKNOWN_37:
-		return "SERVER_UNKNOWN_37";
-	    case SERVER_LOGINREPLY2:
-		return "SERVER_LOGINREPLY2";
-		case SERVER_LOGINREPLY_W3:
-		return "SERVER_LOGINREPLY_W3";
-	    case SERVER_LOGONPROOFREPLY:
-		return "SERVER_LOGONPROOFREPLY";
-	    case SERVER_CREATEACCTREPLY2:
-		return "SERVER_CREATEACCOUNT_W3";
-	    case SERVER_CREATEACCOUNT_W3:
-		return "SERVER_CREATEACCTREPLY2";
-	    //case SERVER_FINDANONGAME:
-		//return "SERVER_FINDANONGAME";
-	    case SERVER_CDKEYREPLY3:
-		return "SERVER_CDKEYREPLY3";
+	    case SERVER_SETEMAILREQ:
+		return "SERVER_SETEMAILREQ";
+	    case SERVER_FINDANONGAME:
+		return "SERVER_FINDANONGAME";
+	    case SERVER_ARRANGEDTEAM_FRIENDSCREEN:
+		return "SERVER_ARRANGEDTEAM_FRIENDSCREEN";
+	    case SERVER_ARRANGEDTEAM_INVITE_FRIEND_ACK:
+		return "SERVER_ARRANGEDTEAM_INVITE_FRIEND_ACK";
+	    case SERVER_ARRANGEDTEAM_SEND_INVITE:
+		return "SERVER_ARRANGEDTEAM_SEND_INVITE";
+	    case SERVER_ARRANGEDTEAM_MEMBER_DECLINE:
+		return "SERVER_ARRANGEDTEAM_MEMBER_DECLINE";		
+	    case SERVER_FRIENDSLISTREPLY:
+		return "SERVER_FRIENDSLISTREPLY";		
+	    case SERVER_FRIENDINFOREPLY:
+		return "SERVER_FRIENDINFOREPLY";		
+	    case SERVER_FRIENDADD_ACK:
+		return "SERVER_FRIENDADD_ACK";
+	    case SERVER_FRIENDDEL_ACK:
+		return "SERVER_FRIENDDEL_ACK";		
+	    case SERVER_FRIENDMOVE_ACK:
+		return "SERVER_FRIENDMOVE_ACK";		
 	    }
 	    return "unknown";
 	    
@@ -772,7 +840,31 @@ extern char const * packet_get_type_str(t_packet const * packet, t_packet_dir di
 	    }
 	    return "unknown";
 	case packet_class_w3route:
+	    if (packet_get_size(packet)<sizeof(t_w3route_header))
+	    {
+		eventlog(eventlog_level_error,"packet_get_type_str","packet is shorter than header (len=%u)",packet_get_size(packet));
 		return "unknown";
+	    }
+	    switch (bn_short_get(packet->u.bnet.h.type))
+	    {
+	    case SERVER_W3ROUTE_READY:
+	        return "SERVER_W3ROUTE_READY";
+	    case SERVER_W3ROUTE_LOADINGACK:
+	        return "SERVER_W3ROUTE_LOADINGACK";	        
+	    case SERVER_W3ROUTE_ECHOREQ:
+	        return "SERVER_W3ROUTE_ECHOREQ";	        
+	    case SERVER_W3ROUTE_ACK:
+	        return "SERVER_W3ROUTE_ACK";	        
+	    case SERVER_W3ROUTE_PLAYERINFO:
+	        return "SERVER_W3ROUTE_PLAYERINFO";	        
+	    case SERVER_W3ROUTE_LEVELINFO:
+	        return "SERVER_W3ROUTE_LEVELINFO";
+	    case SERVER_W3ROUTE_STARTGAME1:
+	        return "SERVER_W3ROUTE_STARTGAME1";	        
+	    case SERVER_W3ROUTE_STARTGAME2:
+	        return "SERVER_W3ROUTE_STARTGAME2";	        
+	    }	
+	    return "unknown";
 	case packet_class_none:
 	    return "unknown";
 	}

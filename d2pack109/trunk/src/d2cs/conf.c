@@ -60,8 +60,8 @@ static int conf_set_default(t_conf_table * conf_table, void * param_data, int da
 static int conf_set_value(t_conf_table * conf, void * param_data, char * value);
 static int conf_int_set(void * data, int value);
 static int conf_bool_set(void * data, int value);
-static int conf_str_set(void * data, char * value);
-static int conf_hexstr_set(void * data, char * value);
+static int conf_str_set(void * data, char const * value);
+static int conf_hexstr_set(void * data, char const * value);
 static int conf_type_get_size(e_conf_type type);
 
 static int conf_int_set(void * data, int value)
@@ -82,7 +82,7 @@ static int conf_bool_set(void * data, int value)
 	return 0;
 }
 
-static int conf_str_set(void * data, char * value)
+static int conf_str_set(void * data, char const * value)
 {
 	char * * p;
 	char	* tmp;
@@ -95,7 +95,7 @@ static int conf_str_set(void * data, char * value)
 	return 0;
 }
 
-static int conf_hexstr_set(void * data, char * value)
+static int conf_hexstr_set(void * data, char const * value)
 {
 	char * * p;
 	char * tmp;
@@ -123,10 +123,10 @@ static int conf_set_default(t_conf_table * conf_table, void * param_data, int da
 		}
 		p=(char *)param_data+conf_table[i].offset;
 		switch (conf_table[i].type) {
-			CASE(conf_type_bool, conf_bool_set(p, conf_table[i].def_value));
-			CASE(conf_type_int,  conf_int_set(p, conf_table[i].def_value));
-			CASE(conf_type_str,  conf_str_set(p, (char *)conf_table[i].def_value));
-			CASE(conf_type_hexstr,  conf_hexstr_set(p, (char *)conf_table[i].def_value));
+                        CASE(conf_type_bool, conf_bool_set(p, conf_table[i].def_intval));
+                        CASE(conf_type_int,  conf_int_set(p, conf_table[i].def_intval));
+                        CASE(conf_type_str,  conf_str_set(p, conf_table[i].def_strval));
+                        CASE(conf_type_hexstr,  conf_hexstr_set(p, conf_table[i].def_strval));
 			default:
 				eventlog(eventlog_level_error,__FUNCTION__,"conf table item %d bad type %d",i,conf_table[i].type);
 				return -1;

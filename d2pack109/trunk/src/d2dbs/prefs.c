@@ -42,28 +42,27 @@
 #include "common/eventlog.h"
 #include "common/setup_after.h"
 
-/* FIXME: arg... pointers can't always fit into ints nor are they guaranteed to be numeric */
 static t_conf_table prefs_conf_table[]={
-    { "logfile",              offsetof(t_prefs,logfile),             conf_type_str,  (int)DEFAULT_LOG_FILE        },
-    { "logfile-gs",           offsetof(t_prefs,logfile_gs),          conf_type_str,  (int)DEFAULT_LOG_FILE_GS     },
-    { "loglevels",            offsetof(t_prefs,loglevels),           conf_type_str,  (int)DEFAULT_LOG_LEVELS      },
-    { "servaddrs",            offsetof(t_prefs,servaddrs),           conf_type_str,  (int)D2DBS_SERVER_ADDRS      },
-    { "gameservlist",         offsetof(t_prefs,gameservlist),        conf_type_str,  (int)D2GS_SERVER_LIST        },
-    { "charsavedir",          offsetof(t_prefs,charsavedir),         conf_type_str,  (int)D2DBS_CHARSAVE_DIR      },
-    { "charinfodir",          offsetof(t_prefs,charinfodir),         conf_type_str,  (int)D2DBS_CHARINFO_DIR      },
-    { "bak_charsavedir",      offsetof(t_prefs,charsavebakdir),      conf_type_str,  (int)D2DBS_CHARSAVEBAK_DIR   },
-    { "bak_charinfodir",      offsetof(t_prefs,charinfobakdir),      conf_type_str,  (int)D2DBS_CHARINFOBAK_DIR   },
-    { "ladderdir",            offsetof(t_prefs,ladderdir),           conf_type_str,  (int)D2DBS_LADDER_DIR        },
-    { "laddersave_interval",  offsetof(t_prefs,laddersave_interval), conf_type_int,  3600                         },
-    { "ladderinit_time",      offsetof(t_prefs,ladderinit_time),     conf_type_int,  0                            },
-    { "shutdown_delay",       offsetof(t_prefs,shutdown_delay),      conf_type_int,  DEFAULT_SHUTDOWN_DELAY       },
-    { "shutdown_decr",        offsetof(t_prefs,shutdown_decr),       conf_type_int,  DEFAULT_SHUTDOWN_DECR        },  
-    { "idletime",             offsetof(t_prefs,idletime),            conf_type_int,  DEFAULT_IDLETIME             },  
-    { "keepalive_interval",   offsetof(t_prefs,keepalive_interval),  conf_type_int,  DEFAULT_KEEPALIVE_INTERVAL   },  
-    { "timeout_checkinterval",offsetof(t_prefs,timeout_checkinterval),conf_type_int, DEFAULT_TIMEOUT_CHECKINTERVAL},  
-    { "XML_ladder_output"    ,offsetof(t_prefs,XML_ladder_output),   conf_type_int,  0                            },
-    { "ladderupdate_threshold",offsetof(t_prefs,ladderupdate_threshold),conf_type_int,DEFAULT_LADDERUPDATE_THRESHOLD},
-    { NULL,                   0,                                     conf_type_none, 0                            }
+    { "logfile",              offsetof(t_prefs,logfile),             conf_type_str,  0,		DEFAULT_LOG_FILE        },
+    { "logfile-gs",           offsetof(t_prefs,logfile_gs),          conf_type_str,  0,		DEFAULT_LOG_FILE_GS     },
+    { "loglevels",            offsetof(t_prefs,loglevels),           conf_type_str,  0,		DEFAULT_LOG_LEVELS      },
+    { "servaddrs",            offsetof(t_prefs,servaddrs),           conf_type_str,  0,		D2DBS_SERVER_ADDRS      },
+    { "gameservlist",         offsetof(t_prefs,gameservlist),        conf_type_str,  0,		D2GS_SERVER_LIST        },
+    { "charsavedir",          offsetof(t_prefs,charsavedir),         conf_type_str,  0,		D2DBS_CHARSAVE_DIR      },
+    { "charinfodir",          offsetof(t_prefs,charinfodir),         conf_type_str,  0,		D2DBS_CHARINFO_DIR      },
+    { "bak_charsavedir",      offsetof(t_prefs,charsavebakdir),      conf_type_str,  0,		D2DBS_CHARSAVEBAK_DIR   },
+    { "bak_charinfodir",      offsetof(t_prefs,charinfobakdir),      conf_type_str,  0,		D2DBS_CHARINFOBAK_DIR   },
+    { "ladderdir",            offsetof(t_prefs,ladderdir),           conf_type_str,  0,		D2DBS_LADDER_DIR        },
+    { "laddersave_interval",  offsetof(t_prefs,laddersave_interval), conf_type_int,  3600,	NULL                    },
+    { "ladderinit_time",      offsetof(t_prefs,ladderinit_time),     conf_type_int,  0,		NULL                    },
+    { "shutdown_delay",       offsetof(t_prefs,shutdown_delay),      conf_type_int,  DEFAULT_SHUTDOWN_DELAY,		NULL       },
+    { "shutdown_decr",        offsetof(t_prefs,shutdown_decr),       conf_type_int,  DEFAULT_SHUTDOWN_DECR,		NULL        },  
+    { "idletime",             offsetof(t_prefs,idletime),            conf_type_int,  DEFAULT_IDLETIME,		NULL             },  
+    { "keepalive_interval",   offsetof(t_prefs,keepalive_interval),  conf_type_int,  DEFAULT_KEEPALIVE_INTERVAL,		NULL   },  
+    { "timeout_checkinterval",offsetof(t_prefs,timeout_checkinterval),conf_type_int, DEFAULT_TIMEOUT_CHECKINTERVAL,		NULL},  
+    { "XML_ladder_output"    ,offsetof(t_prefs,XML_ladder_output),   conf_type_int,  0,		NULL                            },
+    { "ladderupdate_threshold",offsetof(t_prefs,ladderupdate_threshold),conf_type_int,DEFAULT_LADDERUPDATE_THRESHOLD,		NULL},
+    { NULL,                   0,                                     conf_type_none, 0,		NULL                            }
 };
 
 static t_prefs prefs_conf;

@@ -100,6 +100,18 @@ AC_CHECK_LIB(nsl, gethostbyname, [LIBS="$LIBS -lnsl"])
 AC_CHECK_LIB(socket, socket, [LIBS="$LIBS -lsocket"])
 AC_CHECK_LIB(resolv, inet_aton, [LIBS="$LIBS -lresolv"])
 AC_CHECK_LIB(z, compress, [LIBS="$LIBS -lz"])
+dnl BeOS BONE...
+AC_CHECK_LIB(bind, __inet_aton, [LIBS="$LIBS -lbind"])
+case "$host" in
+        [*-beos*])
+                if test "$ac_cv_lib_bind___inet_aton" = "yes"; then
+                        dnl force things, AC_CHECK_FUNC will never get the mangled versions anyway.
+                        echo "Forcing inet_aton() and inet_ntoa() to be enabled"
+                        ac_cv_func_inet_aton='yes'
+                        ac_cv_func_inet_ntoa='yes'
+                fi
+                ;;
+esac
 
 # Checks for header files.
 AC_HEADER_DIRENT
