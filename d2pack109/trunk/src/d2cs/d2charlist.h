@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2000,2001	Onlyer	(onlyer@263.net)
+ * Copyright (C) 2004      ls_sons  (ls@gamelife.org)
+ * Copyright (C) 2004      Olaf Freyer (aaron@cs.tu-berlin.de)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,13 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-#ifndef INCLUDED_SERVER_H
-#define INCLUDED_SERVER_H
 
-#include "common/fdwatch.h"
+#include "common/elist.h"
+#include "d2cs_d2gs_character.h"
 
-extern int d2cs_server_process(void);
-extern int d2cs_server_handle_tcp(void*,t_fdwatch_type);
-extern int d2cs_server_handle_accept(void*,t_fdwatch_type);
+typedef struct  	d2charlist{
+    t_d2charinfo_file	*charinfo;
+    int			expiration_time;
+    t_elist		list;
+} t_d2charlist;
 
-#endif
+extern int d2charlist_add_char(t_elist *, t_d2charinfo_file *i, unsigned int);

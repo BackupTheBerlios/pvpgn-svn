@@ -81,6 +81,7 @@
 #include "handle_init.h"
 #include "handle_bnetd.h"
 #include "d2charfile.h"
+#include "common/fdwatch.h"
 #include "common/addr.h"
 #include "common/introtate.h"
 #include "common/network.h"
@@ -92,6 +93,7 @@
 
 static t_hashtable 	* connlist_head=NULL;
 static t_hashtable	* conn_charname_list_head=NULL;
+static t_list		* connlist_dead=NULL;
 static unsigned int	total_connection=0;
 
 static int conn_handle_connecting(t_connection * c);
@@ -143,6 +145,11 @@ extern int d2cs_connlist_destroy(void)
 {
 	t_connection 	* c;
 	
+	d2cs_connlist_reap();
+	if (list_destroy(connlist_dead))
+		eventlog(eventlog_level_error,__FUNCTION__,"error destroy conndead list");
+	connlist_dead = NULL;
+
 	BEGIN_HASHTABLE_TRAVERSE_DATA(connlist_head, c)
 	{
 		d2cs_conn_destroy(c);
@@ -160,6 +167,20 @@ extern int d2cs_connlist_destroy(void)
 		return -1;
 	}
 	conn_charname_list_head=NULL;
+	return 0;
+}
+
+extern int d2cs_connlist_reap(void)
+{
+	t_connection 	* c;
+	
+	if (!connlist_dead) return 0;
+	BEGIN_LIST_TRAVERSE_DATA(connlist_dead, c)
+	{
+		d2cs_conn_destroy(c);
+	}
+	END_LIST_TRAVERSE_DATA()
+
 	return 0;
 }
 
@@ -237,7 +258,7 @@ static int conn_create_packet(t_connection * c)
 		eventlog(eventlog_level_error,__FUNCTION__,"error create packet");
 		return 0;
 	}
-	queue_push_packet(&c->inqueue,packet);
+	conn_push_inqueue(c,packet);
 	packet_del_ref(packet);
 	return 0;
 }
@@ -252,6 +273,11 @@ static int conn_handle_connecting(t_connection * c)
 	}
 	eventlog(eventlog_level_info,__FUNCTION__,"connected to %s",addr_num_to_addr_str(c->addr, c->port));
 	c->state=conn_state_init;
+        /* this is a kind of hack to not update fd but updating breaks kqueue
+         * and the clean fix would require a cache a userland copy of the kernel
+	 * kqueue fds, considering that it also doesnt brake anything else should do
+	 * for the moment 
+	fdwatch_update_fd(c->sock, fdwatch_type_read); */
 	switch (c->class) {
 		case conn_class_bnetd:
 			retval=handle_bnetd_init(c);
@@ -289,7 +315,7 @@ static int conn_handle_read(t_connection * c)
 		if (conn_create_packet(c)<0) return -1;
 		c->insize=0;
 	}
-	if (!(packet=queue_peek_packet((t_queue const * const *)&c->inqueue))) return 0;
+	if (!(packet=conn_peek_inqueue(c))) return 0;
 
 	switch (net_recv_packet(c->sock,packet,&c->insize)) {
 		case -1:
@@ -300,7 +326,7 @@ static int conn_handle_read(t_connection * c)
 			break;
 		case 1:
 			c->insize=0;
-			packet=queue_pull_packet(&c->inqueue);
+			packet=conn_pull_inqueue(c);
 			retval=conn_handle_packet(c,packet);
 			packet_del_ref(packet);
 			break;
@@ -320,7 +346,7 @@ static int conn_handle_write(t_connection * c)
 		return conn_handle_connecting(c);
 	}
 
-	if (!(packet=queue_peek_packet((t_queue const * const *)&c->outqueue))) return 0;
+	if (!(packet=conn_peek_outqueue(c))) return 0;
 
 	switch (net_send_packet(c->sock, packet, &c->outsize)) {
 		case -1:
@@ -331,7 +357,7 @@ static int conn_handle_write(t_connection * c)
 			break;
 		case 1:
 			c->outsize=0;
-			packet=queue_pull_packet(&c->outqueue);
+			packet=conn_pull_outqueue(c);
 			packet_del_ref(packet);
 			retval=0;
 			break;
@@ -418,6 +444,7 @@ extern t_connection * d2cs_conn_create(int sock, unsigned int local_addr, unsign
 	c->outqueue=NULL;
 	c->inqueue=NULL;
 	c->outsize=0;
+	c->outsizep=0;
 	c->insize=0;
 	c->charinfo=NULL;
 	c->d2gs_id=0;
@@ -461,6 +488,8 @@ extern int d2cs_conn_destroy(t_connection * c)
 	queue_clear(&c->inqueue);
 	queue_clear(&c->outqueue);
 
+	if (connlist_dead) list_remove_data(connlist_dead, c);
+	fdwatch_del_fd(c->sock);
 	psock_shutdown(c->sock,PSOCK_SHUT_RDWR);
 	psock_close(c->sock);
 
@@ -485,6 +514,19 @@ extern t_conn_state d2cs_conn_get_state(t_connection const * c)
 extern int d2cs_conn_set_state(t_connection * c, t_conn_state state)
 {
 	ASSERT(c,-1);
+	/* special case for destroying connections, add them to connlist_dead list */
+	if (state == conn_state_destroy && c->state != conn_state_destroy) {
+	    if (!connlist_dead && !(connlist_dead = list_create())) {
+		eventlog(eventlog_level_error, __FUNCTION__, "could not initilize connlist_dead list");
+		return -1;
+	    }
+	    list_append_data(connlist_dead, c);
+	} else if (state != conn_state_destroy && c->state == conn_state_destroy) {
+	    if (list_remove_data(connlist_dead, c)) {
+		eventlog(eventlog_level_error, __FUNCTION__, "could not remove dead connection");
+		return -1;
+	    }
+	}
 	c->state=state;
 	return 0;
 }
@@ -524,6 +566,94 @@ extern unsigned int d2cs_conn_get_in_size(t_connection const * c)
 {
 	ASSERT(c,0);
 	return c->insize;
+}
+
+extern int conn_push_outqueue(t_connection * c, t_packet * packet)
+{
+    if (!c)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL connection");
+        return -1;
+    }
+
+    if (!packet)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL packet");
+        return -1;
+    }
+
+    queue_push_packet((t_queue * *)&c->outqueue, packet);
+    if (!c->outsizep++) fdwatch_update_fd(c->sock, fdwatch_type_read | fdwatch_type_write);
+
+    return 0;
+}
+
+extern t_packet * conn_peek_outqueue(t_connection * c)
+{
+    if (!c)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL connection");
+        return NULL;
+    }
+
+    return queue_peek_packet((t_queue const * const *)&c->outqueue);
+}
+
+extern t_packet * conn_pull_outqueue(t_connection * c)
+{
+    if (!c)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL connection");
+        return NULL;
+    }
+
+    if (c->outsizep) {
+        if (!(--c->outsizep)) fdwatch_update_fd(c->sock, fdwatch_type_read);
+        return queue_pull_packet((t_queue * *)&c->outqueue);
+    }
+
+    return NULL;
+}
+
+extern int conn_push_inqueue(t_connection * c, t_packet * packet)
+{
+    if (!c)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL connection");
+        return -1;
+    }
+
+    if (!packet)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL packet");
+        return -1;
+    }
+
+    queue_push_packet((t_queue * *)&c->inqueue, packet);
+
+    return 0;
+}
+
+extern t_packet * conn_peek_inqueue(t_connection * c)
+{
+    if (!c)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL connection");
+        return NULL;
+    }
+
+    return queue_peek_packet((t_queue const * const *)&c->inqueue);
+}
+
+extern t_packet * conn_pull_inqueue(t_connection * c)
+{
+    if (!c)
+    {
+        eventlog(eventlog_level_error, __FUNCTION__, "got NULL connection");
+        return NULL;
+    }
+
+    return queue_pull_packet((t_queue * *)&c->inqueue);
 }
 
 extern int conn_add_socket_flag(t_connection * c, unsigned int flag)

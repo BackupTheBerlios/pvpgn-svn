@@ -38,8 +38,7 @@ servaddrs		=	0.0.0.0:6113
 lod_realm = 2
 
 # This sets whether you can convert a clasic char to
-# an expansion char. You should leave this set to 0
-# or the game server might crash
+# an expansion char.
 # Allow Convert = 1
 # Don't allow Convert = 0
 allow_convert = 0
@@ -85,7 +84,7 @@ charsavedir		=	/usr/local/var/charsave
 charinfodir		=	/usr/local/var/charinfo
 ladderdir		=	/usr/local/var/ladders
 newbiefile		=	/usr/local/var/files/newbie.save
-d2gstransfile		=	/usr/local/etc/d2gstrans
+d2gstransfile		=	/usr/local/etc/d2gstrans.conf
 #										#
 #################################################################################
 
@@ -104,6 +103,13 @@ check_multilogin	=	0
 
 # Maxinum number of character per account
 maxchar			=	8
+
+# Character sorting. Options are: level, mtime, name, none. (none assumed if
+# not specified).
+#charlist_sort = "none"
+
+# Do we need ascending or descending order for charlist?
+#charlist_sort_order = "ASC"
 
 # Maxinum number of games will be shown in join game list
 # Zero = infinite

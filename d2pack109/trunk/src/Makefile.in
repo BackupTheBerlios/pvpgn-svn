@@ -68,6 +68,7 @@ COMPILE		= @CC@ @CFLAGS@ ${CPPFLAGS} -fno-strict-aliasing -c
 LINK		= @CC@ @CFLAGS@ @LDFLAGS@
 LINK_LIBS	= @LIBS@
 
+PARTS           = bnetd common compat d2cs d2dbs
 
 d2cs_SBIN       = ${SRC_SBINDIR}/d2cs
 d2cs_OBJECTS	= ${SRC_D2CSDIR}/main.o \
@@ -80,6 +81,7 @@ ${SRC_D2CSDIR}/server.o \
 ${SRC_D2CSDIR}/handle_init.o \
 ${SRC_D2CSDIR}/handle_d2cs.o \
 ${SRC_D2CSDIR}/d2charfile.o \
+${SRC_D2CSDIR}/d2charlist.o \
 ${SRC_D2CSDIR}/xstring.o \
 ${SRC_D2CSDIR}/gamequeue.o \
 ${SRC_D2CSDIR}/conf.o \
@@ -103,6 +105,12 @@ ${SRC_COMMONDIR}/addr.o \
 ${SRC_COMMONDIR}/util.o \
 ${SRC_COMMONDIR}/queue.o \
 ${SRC_COMMONDIR}/network.o \
+${SRC_COMMONDIR}/fdwatch.o \
+${SRC_COMMONDIR}/fdwatch_select.o \
+${SRC_COMMONDIR}/fdwatch_poll.o \
+${SRC_COMMONDIR}/fdwatch_epoll.o \
+${SRC_COMMONDIR}/fdwatch_kqueue.o \
+${SRC_COMMONDIR}/rlimit.o \
 ${SRC_COMPATDIR}/inet_aton.o \
 ${SRC_COMPATDIR}/inet_ntoa.o \
 ${SRC_COMPATDIR}/strdup.o \
@@ -139,6 +147,12 @@ ${SRC_COMMONDIR}/bn_type.o \
 ${SRC_COMMONDIR}/check_alloc.o \
 ${SRC_COMMONDIR}/util.o \
 ${SRC_COMMONDIR}/addr.o \
+${SRC_COMMONDIR}/fdwatch.o \
+${SRC_COMMONDIR}/fdwatch_select.o \
+${SRC_COMMONDIR}/fdwatch_poll.o \
+${SRC_COMMONDIR}/fdwatch_epoll.o \
+${SRC_COMMONDIR}/fdwatch_kqueue.o \
+${SRC_COMMONDIR}/rlimit.o \
 ${SRC_COMPATDIR}/psock.o \
 ${SRC_COMPATDIR}/strerror.o \
 ${SRC_COMPATDIR}/strsep.o
@@ -146,7 +160,7 @@ ${SRC_COMPATDIR}/strsep.o
 OBJECTS		= ${d2cs_OBJECTS} ${d2dbs_OBJECTS}
 SBINS           = ${d2cs_SBIN} ${d2dbs_SBIN}
 
-CONFS		= d2cs.conf d2dbs.conf d2gstrans
+CONFS		= d2cs.conf d2dbs.conf d2gstrans.conf
 
 SHARES		= newbie.save
 
@@ -154,7 +168,7 @@ OTHERRM		= ${SRC_ACDIR}/ansi2knr ${SRC_ACDIR}/ansi2knr.o @ANSI2KNR_TMP@
 DIRS		= ${SRC_SBINDIR}
 
 .PHONY: all
-all: @ANSI2KNR_DEP@ config ${SBINS} ${SRC_CONFDIR}/d2cs.conf ${SRC_CONFDIR}/d2dbs.conf
+all: .dep @ANSI2KNR_DEP@ config ${SBINS} ${SRC_CONFDIR}/d2cs.conf ${SRC_CONFDIR}/d2dbs.conf
 
 .PHONY: clean
 clean:
@@ -180,7 +194,7 @@ cvsclean: distclean
 clean-compile: clean all
 
 .PHONY: config
-config: ${SRC_SRCDIR}/Makefile ${SRC_SRCDIR}/config.h
+config: .dep ${SRC_SRCDIR}/Makefile ${SRC_SRCDIR}/config.h
 
 ${SRC_SRCDIR}/configure: ${SRC_SRCDIR}/configure.in
 	@${ECHO} "The configure script is out of date; rebuilding..."
@@ -215,7 +229,7 @@ ${SRC_SBINDIR}:
 	${INSTALL_DIRS} $@
 
 .PHONY: install
-install: install-sbin install-conf install-share
+install: .dep install-sbin install-conf install-share
 
 .PHONY: install-sbin
 install-sbin: ${SBINS}
@@ -275,11 +289,11 @@ uninstall-share:
 
 ${SRC_CONFDIR}/d2cs.conf: ${SRC_CONFDIR}/d2cs.conf.in ${SRC_SRCDIR}/config.status
 	@${RMF} $@
-	${SED} -e "s@\(=[[:blank:]]*\"*\)/usr/local/var/@\1${sharedir}/@g" -e "s@\(=[[:blank:]]*\"*\)/usr/local/etc/@\1${confdir}/@g" ${SRC_CONFDIR}/d2cs.conf.in > $@
+	${SED} -e "s@/usr/local/var/@${sharedir}/@g" -e "s@/usr/local/etc/@${confdir}/@g" ${SRC_CONFDIR}/d2cs.conf.in > $@
 
 ${SRC_CONFDIR}/d2dbs.conf: ${SRC_CONFDIR}/d2dbs.conf.in ${SRC_SRCDIR}/config.status
 	@${RMF} $@
-	${SED} -e "s@\(=[[:blank:]]*\"*\)/usr/local/var/@\1${sharedir}/@g" -e "s@\(=[[:blank:]]*\"*\)/usr/local/etc/@\1${confdir}/@g" ${SRC_CONFDIR}/d2dbs.conf.in > $@
+	${SED} -e "s@/usr/local/var/@${sharedir}/@g" -e "s@/usr/local/etc/@${confdir}/@g" ${SRC_CONFDIR}/d2dbs.conf.in > $@
 
 ${SRC_ACDIR}/ansi2knr: ${SRC_ACDIR}/ansi2knr.o
 	@${RMF} $@
@@ -295,6 +309,16 @@ ${SRC_ACDIR}/ansi2knr.o: ${SRC_ACDIR}/ansi2knr.c
 	@COMPILEANSI2@
 	@COMPILEANSI3@
 
+.dep:
+	${MAKE} dep
+
+dep:
+        @${RMF} .dep
+        @for a in ${PARTS}; do \
+            echo Dependency check: $$a; \
+            ${COMPILE} -MM `ls $$a/*.c` | sed -e "s@\(.*\)\.o:\(.*\)@$$a\/\1\.o:\2@g" 1>>.dep; \
+        done
+
 ${d2cs_SBIN}: ${d2cs_OBJECTS}
 	@${INSTALL_DIRS} ${SRC_SBINDIR}
 	@${RMF} $@
@@ -304,6 +328,10 @@ ${d2dbs_SBIN}: ${d2dbs_OBJECTS}
 	@${INSTALL_DIRS} ${SRC_SBINDIR}
 	@${RMF} $@
 	${LINK} ${d2dbs_OBJECTS} ${LINK_LIBS} -o $@
+
+ifneq ($(wildcard .dep),)
+include .dep
+endif
 
 # Tell versions (3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -34,16 +34,9 @@
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
-
-/* FIXME: sys/resource.h should be checked with autoconf */ 
-#ifndef WIN32
-#define HAVE_SYS_RESOURCE_H
-#endif
-
 #ifdef HAVE_SYS_RESOURCE_H
 # include <sys/resource.h>
 #endif
-
 #include "common/eventlog.h"
 #include "common/bn_type.h"
 #include "common/setup_after.h"
@@ -61,14 +54,13 @@
 extern int get_socket_limit(void)
 {
 	unsigned int socklimit = BNETD_MAX_SOCKETS;
-#ifndef WIN32
+#ifdef HAVE_GETRLIMIT
 	struct rlimit rlim;
 	if(getrlimit(RLIM_NUMFILES, &rlim) < 0)
 		eventlog(eventlog_level_error, "get_socket_limit", "getrlimit returned error: %s", strerror(errno));
-	else if(rlim.rlim_cur < socklimit)
-		socklimit = rlim.rlim_cur;
+	socklimit = rlim.rlim_cur;
 #else
-	/* FIXME: somehow get WSAData win32 socket limit here */
+	/* FIXME: WIN32: somehow get WSAData win32 socket limit here */
 #endif
 
 #if !(defined HAVE_POLL || defined HAVE_KQUEUE || defined HAVE_EPOLL)

@@ -59,7 +59,7 @@ extern char * next_token(char * ptr, unsigned int * pos)
 	return NULL; 
     
     /* skip leading whitespace */
-    for (i=*pos; isspace(ptr[i]); i++);
+    for (i=*pos; isspace((int)ptr[i]); i++);
     
     if (ptr[i]=='\0')
 	return NULL; /* if after whitespace, we're done */
@@ -83,7 +83,7 @@ extern char * next_token(char * ptr, unsigned int * pos)
 		break;
         }
 	else
-	    if (isspace(ptr[i]))
+	    if (isspace((int)ptr[i]))
 		break;
 	i++;
     }

@@ -77,7 +77,7 @@ extern int handle_bnetd_init(t_connection * c)
 	packet=packet_create(packet_class_init);
 	packet_set_size(packet,sizeof(t_client_initconn));
 	bn_byte_set(&packet->u.client_initconn.class, CLIENT_INITCONN_CLASS_D2CS_BNETD);
-	queue_push_packet(d2cs_conn_get_out_queue(c),packet);
+	conn_push_outqueue(c,packet);
 	packet_del_ref(packet);
 	d2cs_conn_set_state(c,conn_state_connected);
 	eventlog(eventlog_level_info,__FUNCTION__,"sent init class packet to bnetd");
@@ -97,7 +97,7 @@ static int on_bnetd_authreq(t_connection * c, t_packet * packet)
 		bn_int_set(&rpacket->u.d2cs_bnetd_authreply.h.seqno,1);
 		bn_int_set(&rpacket->u.d2cs_bnetd_authreply.version,D2CS_VERSION_NUMBER);
 		packet_append_string(rpacket,prefs_get_realmname());
-		queue_push_packet(d2cs_conn_get_out_queue(c),rpacket);
+		conn_push_outqueue(c,rpacket);
 		packet_del_ref(rpacket);
 	}
 	return 0;
@@ -160,7 +160,7 @@ static int on_bnetd_accountloginreply(t_connection * c, t_packet * packet)
 		packet_set_size(rpacket,sizeof(t_d2cs_client_loginreply));
 		packet_set_type(rpacket,D2CS_CLIENT_LOGINREPLY);
 		bn_int_set(&rpacket->u.d2cs_client_loginreply.reply,reply);
-		queue_push_packet(d2cs_conn_get_out_queue(client),rpacket);
+		conn_push_outqueue(client,rpacket);
 		packet_del_ref(rpacket);
 	}
 	sq_destroy(sq);
@@ -216,7 +216,7 @@ static int on_bnetd_charloginreply(t_connection * c, t_packet * packet)
 			packet_set_size(rpacket,sizeof(t_d2cs_client_createcharreply));
 			packet_set_type(rpacket,D2CS_CLIENT_CREATECHARREPLY);
 			bn_int_set(&rpacket->u.d2cs_client_createcharreply.reply,reply);
-			queue_push_packet(d2cs_conn_get_out_queue(client),rpacket);
+			conn_push_outqueue(client,rpacket);
 			packet_del_ref(rpacket);
 		}
 	} else if (type==CLIENT_D2CS_CHARLOGINREQ) {
@@ -239,7 +239,7 @@ static int on_bnetd_charloginreply(t_connection * c, t_packet * packet)
 			packet_set_size(rpacket,sizeof(t_d2cs_client_charloginreply));
 			packet_set_type(rpacket,D2CS_CLIENT_CHARLOGINREPLY);
 			bn_int_set(&rpacket->u.d2cs_client_charloginreply.reply,reply);
-			queue_push_packet(d2cs_conn_get_out_queue(client),rpacket);
+			conn_push_outqueue(client,rpacket);
 			packet_del_ref(rpacket);
 		}
 	} else {

@@ -60,6 +60,8 @@ typedef struct
 	unsigned int	lod_realm;
 	unsigned int	allow_convert;
 	unsigned int	d2gs_restart_delay;
+        char const      * charlist_sort;
+        char const      * charlist_sort_order;
 } t_prefs;
 
 extern int d2cs_prefs_load(char const * filename);
@@ -107,5 +109,7 @@ extern unsigned int prefs_get_lod_realm(void);
 extern unsigned int prefs_get_allow_convert(void);
 extern char const * prefs_get_d2cs_account_allowed_symbols(void);
 extern unsigned int prefs_get_d2gs_restart_delay(void);
+extern char const * prefs_get_charlist_sort(void);
+extern char const * prefs_get_charlist_sort_order(void);
 
 #endif

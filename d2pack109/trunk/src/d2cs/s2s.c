@@ -69,6 +69,8 @@
 #include "bnetd.h"
 #include "net.h"
 #include "s2s.h"
+#include "common/fdwatch.h"
+#include "server.h"
 #include "common/eventlog.h"
 #include "common/setup_after.h"
 
@@ -148,8 +150,10 @@ extern t_connection * s2s_create(char const * server, unsigned short def_port, t
 	}
 	if (connected) {
 		d2cs_conn_set_state(c,conn_state_init);
+		fdwatch_add_fd(sock, fdwatch_type_read, d2cs_server_handle_tcp, c);
 	} else {
 		d2cs_conn_set_state(c,conn_state_connecting);
+		fdwatch_add_fd(sock, fdwatch_type_write, d2cs_server_handle_tcp, c);
 	}
 	d2cs_conn_set_class(c,class);
 	return c;

@@ -82,6 +82,7 @@
 #include "game.h"
 #include "connection.h"
 #include "serverqueue.h"
+#include "common/fdwatch.h"
 #include "server.h"
 #include "prefs.h"
 #include "d2ladder.h"
@@ -125,8 +126,9 @@ static int server_listen(void)
 		if (psock_ctl(sock,PSOCK_NONBLOCK)<0) {
 			eventlog(eventlog_level_error,__FUNCTION__,"error set listen socket in non-blocking mode");
 		}
-		laddr_data.p=(void *)sock;
+		laddr_data.i = sock;
 		addr_set_data(curr_laddr,laddr_data);
+		fdwatch_add_fd(sock, fdwatch_type_read, d2cs_server_handle_accept, curr_laddr);
 	}
 	END_LIST_TRAVERSE_DATA()
 	return 0;
@@ -140,6 +142,7 @@ static int server_accept(int sock)
 	int			val;
 	unsigned int		ip;
 	unsigned short		port;
+	t_connection	       *cc;
 
 	caddr_len=sizeof(caddr);
 	memset(&caddr,0,sizeof(caddr));
@@ -172,11 +175,12 @@ static int server_accept(int sock)
 			port=ntohs(raddr.sin_port);
 		}
 	}
-	if (!d2cs_conn_create(csock,ip,port,ntohl(caddr.sin_addr.s_addr),ntohs(caddr.sin_port))) {
+	if (!(cc = d2cs_conn_create(csock,ip,port,ntohl(caddr.sin_addr.s_addr),ntohs(caddr.sin_port)))) {
 		eventlog(eventlog_level_error,__FUNCTION__,"error create new connection");
 		psock_close(csock);
 		return -1;
 	}
+	fdwatch_add_fd(csock, fdwatch_type_read, d2cs_server_handle_tcp, cc);
 	return 0;
 }
 
@@ -234,49 +238,34 @@ static int server_handle_timed_event(void)
 	return 0;
 }
 
+extern int d2cs_server_handle_accept(void *data, t_fdwatch_type rw)
+{
+    int sock;
+
+    sock = addr_get_data((t_addr *)data).i;
+    server_accept(sock);
+    return 0;
+}
+
+extern int d2cs_server_handle_tcp(void *data, t_fdwatch_type rw)
+{
+    t_connection *c = (t_connection *)data;
+
+    if (rw & fdwatch_type_read) conn_add_socket_flag(c,SOCKET_FLAG_READ);
+    if (rw & fdwatch_type_write) conn_add_socket_flag(c,SOCKET_FLAG_WRITE);
+    if (conn_handle_socket(c)<0)
+        d2cs_conn_set_state(c, conn_state_destroy);
+
+    return 0;
+}
+
 static int server_handle_socket(void)
 {
-	t_psock_fd_set	rfds, wfds;
-	int		highest_fd, sock;
-	t_addr		* curr_laddr;
-	t_connection	* c;
-	struct timeval	tv;
-
-
-	PSOCK_FD_ZERO(&rfds);
-	PSOCK_FD_ZERO(&wfds);
-	highest_fd=-1;
-
-	BEGIN_LIST_TRAVERSE_DATA(server_listen_addrs,curr_laddr)
-	{
-		sock=(int)addr_get_data(curr_laddr).p;
-		PSOCK_FD_SET(sock,&rfds);
-		if (sock>highest_fd) highest_fd=sock;
-	}
-	END_LIST_TRAVERSE_DATA()
-
-	BEGIN_HASHTABLE_TRAVERSE_DATA(d2cs_connlist(),c)
-	{
-		if (d2cs_conn_get_state(c)==conn_state_destroy) {
-			d2cs_conn_destroy(c);
-			continue;
-		}
-		sock=d2cs_conn_get_socket(c);
-		if (queue_get_length((t_queue const * const *)d2cs_conn_get_out_queue(c))>0) {
-			PSOCK_FD_SET(sock,&wfds);
-		}
-		if (d2cs_conn_get_state(c)==conn_state_connecting) {
-			PSOCK_FD_SET(sock,&wfds);
-		} else {
-			PSOCK_FD_SET(sock,&rfds);
-		}
-		if (sock>highest_fd) highest_fd=sock;
-	}
-	END_HASHTABLE_TRAVERSE_DATA()
-	
-	tv.tv_sec=0;
-	tv.tv_usec=BNETD_POLL_INTERVAL * 1000;
-	switch (psock_select(highest_fd+1,&rfds, &wfds, NULL, &tv)) {
+/*
+	int		sock;
+	t_connection   *c;
+*/
+	switch (fdwatch(BNETD_POLL_INTERVAL)) {
 		case -1:
 			if (
 #ifdef PSOCK_EINTR
@@ -293,30 +282,18 @@ static int server_handle_socket(void)
 			break;
 	}
 
-	BEGIN_LIST_TRAVERSE_DATA(server_listen_addrs,curr_laddr)
-	{
-		sock=(int)addr_get_data(curr_laddr).p;
-		if (PSOCK_FD_ISSET(sock,&rfds)) {
-			server_accept(sock);
-		}
-	}
-	END_LIST_TRAVERSE_DATA()
-
-	BEGIN_HASHTABLE_TRAVERSE_DATA(d2cs_connlist(),c)
-	{
-		sock=d2cs_conn_get_socket(c);
-		if (PSOCK_FD_ISSET(sock,&rfds)) {
-			conn_add_socket_flag(c,SOCKET_FLAG_READ);
-		}
-		if (PSOCK_FD_ISSET(sock,&wfds)) {
-			conn_add_socket_flag(c,SOCKET_FLAG_WRITE);
-		}
-		if (conn_handle_socket(c)<0) {
-			d2cs_conn_destroy(c);
-		}
-		
-	}
+	fdwatch_handle();
+	d2cs_connlist_reap();
+/*
+        BEGIN_HASHTABLE_TRAVERSE_DATA(d2cs_connlist(),c)
+        {
+                sock=d2cs_conn_get_socket(c);
+                if (conn_handle_socket(c)<0) {
+                        d2cs_conn_destroy(c);
+                }
+        }
 	END_HASHTABLE_TRAVERSE_DATA()
+*/
 	return 0;
 }
 
@@ -345,7 +322,7 @@ static int server_cleanup(void)
 
 	BEGIN_LIST_TRAVERSE_DATA(server_listen_addrs,curr_laddr)
 	{
-		sock=(int)addr_get_data(curr_laddr).p;
+		sock=addr_get_data(curr_laddr).i;
 		psock_close(sock);
 	}
 	END_LIST_TRAVERSE_DATA()

@@ -22,7 +22,6 @@ extern char *		strtolower(char * str);
 extern char *		hexstrdup(unsigned char const * src);
 extern unsigned int	hexstrtoraw(unsigned char const * src, char * data, unsigned int datalen);
 extern unsigned char	xtoi(unsigned char ch);
-extern char * *		strtoarray(char const * str, char const * delim, int * count);
 extern char * *		strtoargv(char const * str, unsigned int * count);
 extern char *		arraytostr(char * * array, char const * delim, int count);
 extern char *		str_strip_affix(char * str, char const * affix);

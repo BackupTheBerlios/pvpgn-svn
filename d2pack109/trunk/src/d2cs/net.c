@@ -90,7 +90,7 @@ extern unsigned long int net_inet_addr(char const * host)
 {
 	struct hostent	* hp;
 
-	if (isdigit(host[0])) {
+	if (isdigit((int)host[0])) {
 		return inet_addr(host);
 	} else {
 		hp=gethostbyname(host);

@@ -83,6 +83,8 @@ static t_conf_table prefs_conf_table[]={
     { "allow_convert",		offsetof(t_prefs,allow_convert),     conf_type_int,    0,	NULL			    },
     { "account_allowed_symbols",offsetof(t_prefs,account_allowed_symbols),conf_type_str,0,	DEFAULT_ACC_ALLOWED_SYMBOLS},
     { "d2gs_restart_delay",	offsetof(t_prefs,d2gs_restart_delay),conf_type_int,    DEFAULT_D2GS_RESTART_DELAY,	NULL   },
+    { "charlist_sort",          offsetof(t_prefs,charlist_sort),          conf_type_str,    0,                             "none"                     },
+    { "charlist_sort_order",    offsetof(t_prefs,charlist_sort_order),    conf_type_str,    0,                             "ASC"                      },
     { NULL,                     0,                                   conf_type_none,   0,	NULL                            }
 };
 
@@ -312,4 +314,14 @@ extern char const * prefs_get_d2cs_account_allowed_symbols(void)
 extern unsigned int prefs_get_d2gs_restart_delay(void)
 {
 	return prefs_conf.d2gs_restart_delay;
+}
+
+extern char const * prefs_get_charlist_sort(void)
+{
+	return prefs_conf.charlist_sort;
+}
+
+extern char const * prefs_get_charlist_sort_order(void)
+{
+	return prefs_conf.charlist_sort_order;
 }

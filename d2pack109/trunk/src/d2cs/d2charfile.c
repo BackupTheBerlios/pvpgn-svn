@@ -517,7 +517,7 @@ extern int d2char_check_charname(char const * name)
 	unsigned char	ch;
 	
 	if (!name) return -1;
-	if (!isalpha(name[0])) return -1;
+	if (!isalpha((int)name[0])) return -1;
 
 	for (i=1; i<=MAX_CHARNAME_LEN; i++) {
 		ch=name[i];
@@ -539,7 +539,7 @@ extern int d2char_check_acctname(char const * name)
 	unsigned char	ch;
 	
 	if (!name) return -1;
-	if (!isalnum(name[0])) return -1;
+	if (!isalnum((int)name[0])) return -1;
 
 	for (i=1; i<=MAX_CHARNAME_LEN; i++) {
 		ch=name[i];

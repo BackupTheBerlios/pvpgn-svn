@@ -169,93 +169,6 @@ extern unsigned int hexstrtoraw(unsigned char const * src, char * data, unsigned
 
 #define SPLIT_STRING_INIT_COUNT		32
 #define	SPLIT_STRING_INCREASEMENT	32
-extern char * * strtoarray(char const * str, char const * delim, int * count)
-{
-	int	i ,n, index_size;
-	int	in_delim, match;
-	char	* temp, * result;
-	int	* pindex;
-	char	* pd;
-	char	const * ps;
-	char	* realloc_tmp;
-
-	if (!str || !delim || !count) return NULL;
-
-	temp=malloc(strlen(str)+1);
-	if (!temp) return NULL;
-
-	n = SPLIT_STRING_INIT_COUNT;
-	pindex=malloc(sizeof(char *) * n);
-	if (!pindex) {
-		free(temp);
-		return NULL;
-	}
-
-	*count=0;
-	in_delim=1;
-	ps=str;
-	pd=temp;
-	pindex[0]=0;
-	while (*ps!='\0') {
-		match=0;
-		for (i=0; delim[i]!='\0'; i++) {
-			if ( *ps == delim[i]) {
-				match=1;
-				if (!in_delim) {
-					*pd = '\0';
-					pd++;
-					(*count)++;
-					in_delim=1;
-				}
-				break;
-			}
-		}
-		if (!match) {
-			if (in_delim) {
-				if (*count>=n) {
-					n += SPLIT_STRING_INCREASEMENT;
-					if (!(realloc_tmp=realloc(pindex,n * sizeof(char *)))) {
-						free(pindex);
-						free(temp);
-						return NULL;
-					}
-					pindex=(int *)realloc_tmp;
-				}
-				pindex[*count]= pd-temp;
-				in_delim = 0;
-			}
-			*pd = * ps;
-			pd++;
-		}
-		ps++;
-	}
-	if (!in_delim) {
-		*pd='\0';
-		pd++;
-		(*count)++;
-	}
-	index_size=*count * sizeof(char *);
-	if (!index_size) {
-		free(temp);
-		free(pindex);
-		return NULL;
-	}
-	result=malloc(pd-temp+index_size);
-	if (!result) {
-		free(temp);
-		free(pindex);
-		return NULL;
-	}
-	memcpy(result+index_size,temp,pd-temp);
-	for (i=0; i< *count; i++) {
-		pindex[i]+=(int)result+index_size;
-	}
-	memcpy(result,pindex,index_size);
-	free(temp);
-	free(pindex);
-	return (char **) result;
-}
-
 extern char * * strtoargv(char const * str, unsigned int * count)
 {
 	unsigned int	n, index_size;
@@ -263,14 +176,15 @@ extern char * * strtoargv(char const * str, unsigned int * count)
 	unsigned int	i;
 	int		j;
 	int		* pindex;
+	void		** ptrindex;
 	char		* result;
-	char		* realloc_tmp;
+	void		* realloc_tmp;
 
 	if (!str || !count) return NULL;
 	temp=malloc(strlen(str)+1);
 	if (!temp) return NULL;
 	n = SPLIT_STRING_INIT_COUNT;
-	pindex=malloc(n * sizeof (char *));
+	pindex=malloc(n * sizeof (int));
 	if (!pindex) return NULL;
 
 	i=j=0;
@@ -280,7 +194,7 @@ extern char * * strtoargv(char const * str, unsigned int * count)
 		if (!str[i]) break;
 		if (*count >=n ) {
 			n += SPLIT_STRING_INCREASEMENT;
-			if (!(realloc_tmp=realloc(pindex,n * sizeof(char *)))) {
+			if (!(realloc_tmp=realloc(pindex,n * sizeof(int)))) {
 				free(pindex);
 				free(temp);
 				return NULL;
@@ -321,10 +235,18 @@ extern char * * strtoargv(char const * str, unsigned int * count)
 		return NULL;
 	}
 	memcpy(result+index_size,temp,j);
-	for (i=0; i< *count; i++) {
-		pindex[i] +=(int)result+index_size;
+
+	ptrindex=malloc(*count * sizeof (char*));
+	if (!ptrindex) {
+	    free(temp);
+	    free(pindex);
+	    free(result);
+	    return NULL;
 	}
-	memcpy(result,pindex,index_size);
+	for (i=0; i< *count; i++) {
+		ptrindex[i] = result + index_size + pindex[i];
+	}
+	memcpy(result,ptrindex,index_size);
 	free(temp);
 	free(pindex);
 	return (char * *)result;
