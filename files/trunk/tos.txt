@@ -1,3 +1,4 @@
+test1
 You are currently connected to a PvPGN Server (Player -vs- Player Gaming Network)
 
 PvPGN TERMS OF USE:
